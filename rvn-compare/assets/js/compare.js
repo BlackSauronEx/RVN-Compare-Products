@@ -62,6 +62,26 @@
 	}
 
 	/**
+	 * Сохраняет только meta (настройки вкладки: only-diff, collapsed-группы),
+	 * не трогая список товаров. Для авторизованных — тоже в localStorage
+	 * (это пользовательские UI-предпочтения, сервер их не хранит).
+	 */
+	function saveMeta( patch ) {
+		for ( var k in patch ) {
+			if ( patch.hasOwnProperty( k ) ) {
+				meta[ k ] = patch[ k ];
+			}
+		}
+		try {
+			var cur = readLS();
+			cur.meta = meta;
+			window.localStorage.setItem( LS_KEY, JSON.stringify( cur ) );
+		} catch ( e ) {
+			/* игнорируем */
+		}
+	}
+
+	/**
 	 * Отправить событие изменения списка; все слушатели обновляются сами.
 	 */
 	function emit( name, detail ) {
@@ -536,7 +556,7 @@
 			return;
 		}
 
-		// «Только различия».
+		// «Только различия»: состояние в localStorage (R4-10, §6.2 п.4).
 		var diff = root.querySelector( '[data-rvn-compare-only-diff]' );
 		if ( diff ) {
 			var applyDiff = function () {
@@ -548,17 +568,34 @@
 						rows[ r ].style.display = '';
 					}
 				}
+				if ( ! root.hasAttribute( 'data-diff-persisted' ) ) {
+					root.setAttribute( 'data-diff-persisted', '1' );
+				}
 			};
-			diff.addEventListener( 'change', applyDiff );
+			diff.addEventListener( 'change', function () {
+				applyDiff();
+				saveMeta( { onlyDiff: diff.checked ? '1' : '0' } );
+			} );
+			// Восстановление из meta (только при первичной инициализации).
+			if ( meta.onlyDiff === '1' ) {
+				diff.checked = true;
+			}
 			applyDiff();
 		}
 
-		// Сворачивание групп.
+		// Сворачивание групп: состояние в localStorage по ключу группы.
+		var collapsed = meta.collapsedGroups ? meta.collapsedGroups : {};
 		arrayForEach( root.querySelectorAll( '[data-rvn-compare-group]' ), function ( group ) {
+			var gkey = group.getAttribute( 'data-rvn-compare-group' ) || '';
+			if ( collapsed[ gkey ] === '1' ) {
+				group.classList.add( 'is-collapsed' );
+			}
 			var head = group.querySelector( '[data-rvn-compare-group-toggle]' );
 			if ( head ) {
 				head.addEventListener( 'click', function () {
 					group.classList.toggle( 'is-collapsed' );
+					collapsed[ gkey ] = group.classList.contains( 'is-collapsed' ) ? '1' : '0';
+					saveMeta( { collapsedGroups: collapsed } );
 				} );
 			}
 		} );

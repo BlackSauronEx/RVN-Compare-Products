@@ -543,6 +543,10 @@
 	transition: transform 200ms ease;
 }
 
+.rvn-compare-group__head--static {
+	cursor: default;
+}
+
 .rvn-compare-group.is-collapsed .rvn-compare-group__arrow {
 	transform: rotate(180deg);
 }
@@ -569,6 +573,48 @@
 	font-weight: var(--rvn-compare-label-weight);
 	color: var(--rvn-compare-label-text);
 	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+}
+
+/* Кнопка-тултип [?] у поля. */
+.rvn-compare-tip {
+	position: relative;
+	flex: 0 0 auto;
+	width: 16px;
+	height: 16px;
+	padding: 0;
+	border: 1px solid var(--rvn-compare-border);
+	border-radius: 50%;
+	background: transparent;
+	color: var(--rvn-compare-accent);
+	font-size: 11px;
+	line-height: 1;
+	cursor: help;
+}
+
+.rvn-compare-tip:hover::after,
+.rvn-compare-tip:focus::after {
+	content: attr( data-rvn-compare-tip );
+	position: absolute;
+	left: 50%;
+	bottom: calc( 100% + 8px );
+	transform: translateX( -50% );
+	width: 220px;
+	padding: 8px 10px;
+	background: #1f2937;
+	color: #fff;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 1.4;
+	text-align: left;
+	box-shadow: 0 4px 12px rgba( 0, 0, 0, 0.2 );
+	pointer-events: none;
+	z-index: 20;
+	white-space: normal;
 }
 
 .rvn-compare-row__values {

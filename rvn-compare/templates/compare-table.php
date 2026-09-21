@@ -38,11 +38,14 @@ $structure  = RVN_Compare_Table::instance()->build_structure( $active_ids, $acti
 		</div>
 	<?php endif; ?>
 
+	<?php $show_diff_toggle = '1' === (string) RVN_Compare_Settings::instance()->get( 'show_only_differences_toggle', '1' ); ?>
 	<div class="rvn-compare-toolbar" data-rvn-compare-toolbar>
+		<?php if ( $show_diff_toggle ) : ?>
 		<label class="rvn-compare-diff-toggle">
 			<input type="checkbox" data-rvn-compare-only-diff value="1" />
 			<span><?php esc_html_e( 'Только различия', 'rvn-compare' ); ?></span>
 		</label>
+		<?php endif; ?>
 		<button type="button" class="rvn-compare-clear" data-rvn-compare-clear>
 			<?php echo esc_html( (string) RVN_Compare_Settings::instance()->get( 'clear_text', __( 'Очистить всё', 'rvn-compare' ) ) ); ?>
 		</button>

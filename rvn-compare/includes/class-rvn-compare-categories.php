@@ -147,6 +147,33 @@ final class RVN_Compare_Categories {
 	}
 
 	/**
+	 * Санитизирует массив групп категорий из формы админки.
+	 *
+	 * Принимает как индексированный список ['name'=>..., 'cats'=>...],
+	 * так и ассоциативную карту (index => группа, используется при
+	 * drag&drop/переименовании). Пустые и невалидные отбрасываются.
+	 *
+	 * @param array $raw Сырые данные формы.
+	 * @return array[]  Нормализованный список групп.
+	 */
+	public function sanitize_groups( $raw ) {
+		$out = array();
+		foreach ( (array) $raw as $group ) {
+			if ( ! is_array( $group ) ) {
+				continue;
+			}
+			$name = isset( $group['name'] ) ? sanitize_text_field( wp_unslash( $group['name'] ) ) : '';
+			$cats = isset( $group['cats'] ) ? $group['cats'] : array();
+			$cats = array_values( array_filter( array_map( 'absint', (array) $cats ) ) );
+			if ( '' === $name || empty( $cats ) ) {
+				continue;
+			}
+			$out[] = array( 'name' => $name, 'cats' => $cats );
+		}
+		return $out;
+	}
+
+	/**
 	 * Создаёт группу категорий из списка ID категорий.
 	 *
 	 * @param string $name Название группы.

@@ -213,3 +213,85 @@
 	transform: none;
 	max-width: 320px;
 }
+
+/* ===== Вкладка «Таблица сравнения» (сортируемые списки) ===== */
+
+.rvn-compare-sort {
+	list-style: none;
+	margin: 8px 0 12px;
+	padding: 0;
+	max-width: 760px;
+}
+
+.rvn-compare-sort__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	margin: 0 0 4px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.rvn-compare-sort__item.is-dragging {
+	opacity: 0.5;
+	border-style: dashed;
+}
+
+.rvn-compare-sort__handle {
+	flex: 0 0 auto;
+	cursor: grab;
+	color: #8c8f94;
+	font-size: 16px;
+	line-height: 1;
+	user-select: none;
+}
+
+.rvn-compare-sort__item .regular-text {
+	margin: 0;
+}
+
+.rvn-compare-sort__toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+}
+
+.rvn-compare-sort__item select {
+	margin-left: auto;
+}
+
+.rvn-compare-catgroups {
+	list-style: none;
+	margin: 8px 0 12px;
+	padding: 0;
+	max-width: 760px;
+}
+
+.rvn-compare-catgroups__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	margin: 0 0 4px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.rvn-compare-catgroups__item.is-hidden {
+	display: none;
+}
+
+.rvn-compare-catgroups__cats {
+	flex: 1 1 auto;
+	color: #50575e;
+	font-size: 12px;
+}
+
+.rvn-compare-del-group,
+.rvn-compare-del-catgroup {
+	color: #b32d2e;
+}

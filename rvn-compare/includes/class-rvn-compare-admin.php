@@ -311,27 +311,33 @@ final class RVN_Compare_Admin {
 	}
 
 	/**
-	 * Секция «Группы характеристик» (переименование; drag&drop и добавление — позже).
+	 * Секция «Группы характеристик» (переименование, добавление, удаление, drag&drop).
 	 *
 	 * @param array $all Текущие настройки.
 	 * @return void
 	 */
 	private function render_field_groups_section( $all ) {
-		$fields       = RVN_Compare_Fields::instance();
-		$labels       = $fields->group_labels();
-		$allowed_keys = array( 'basic', 'dimensions', 'specs' );
-		$groups       = (array) $this->setting_value( $all, 'field_groups', array() );
+		$fields = RVN_Compare_Fields::instance();
+		$groups = $fields->group_labels();
 
 		echo '<h2 class="title">' . esc_html__( 'Группы характеристик', 'rvn-compare' ) . '</h2>';
-		echo '<p class="description">' . esc_html__( 'Заголовки-разделители в таблице. Переименуйте их или оставьте как есть.', 'rvn-compare' ) . '</p>';
-		echo '<table class="form-table" role="presentation"><tbody>';
-		foreach ( $allowed_keys as $key ) {
-			$value = isset( $groups[ $key ] ) ? $groups[ $key ] : ( isset( $labels[ $key ] ) ? $labels[ $key ] : $key );
-			echo '<tr><th scope="row"><label for="fg_' . esc_attr( $key ) . '">#' . esc_html( ucfirst( $key ) ) . '</label></th><td>';
-			echo '<input type="text" id="fg_' . esc_attr( $key ) . '" name="field_groups[' . esc_attr( $key ) . ']" value="' . esc_attr( $value ) . '" class="regular-text" />';
-			echo '</td></tr>';
+		echo '<p class="description">' . esc_html__( 'Заголовки-разделители в таблице. Перетаскивайте за ручку, переименовывайте, добавляйте и удаляйте. При удалении группы её поля останутся и попадут в группу «Характеристики».', 'rvn-compare' ) . '</p>';
+
+		echo '<ul class="rvn-compare-sort rvn-compare-sort--groups" data-rvn-compare-sort="groups">';
+		foreach ( $groups as $key => $label ) {
+			echo '<li class="rvn-compare-sort__item">';
+			echo '<span class="rvn-compare-sort__handle" aria-hidden="true">⠿</span>';
+			echo '<input type="text" name="field_groups[' . esc_attr( $key ) . ']" value="' . esc_attr( $label ) . '" class="regular-text" />';
+			echo '<button type="button" class="button-link rvn-compare-del-group" data-del-group="' . esc_attr( $key ) . '">' . esc_html__( 'Удалить', 'rvn-compare' ) . '</button>';
+			echo '</li>';
 		}
-		echo '</tbody></table>';
+		echo '</ul>';
+
+		echo '<p>';
+		echo '<label for="field_groups_new">' . esc_html__( 'Новая группа', 'rvn-compare' ) . '</label> ';
+		echo '<input type="text" id="field_groups_new" name="field_groups_new" class="regular-text" placeholder="' . esc_attr__( 'Название группы', 'rvn-compare' ) . '" />';
+		echo '<button type="button" class="button" data-add-group>' . esc_html__( 'Добавить', 'rvn-compare' ) . '</button>';
+		echo '</p>';
 	}
 
 	/**
@@ -345,12 +351,43 @@ final class RVN_Compare_Admin {
 	 */
 	private function render_fields_section( $all ) {
 		$fields = RVN_Compare_Fields::instance();
+		$groups = $fields->group_labels();
 
 		echo '<h2 class="title">' . esc_html__( 'Поля таблицы', 'rvn-compare' ) . '</h2>';
 		echo '<p class="description">'
-			. esc_html__( 'Базовые поля управляются ниже; атрибуты WooCommerce подтягиваются автоматически. Полное описание выключено по умолчанию.', 'rvn-compare' )
+			. esc_html__( 'Базовые поля можно выключить, переименовать, снабдить подсказкой и перетащить. Атрибуты WooCommerce подтягиваются автоматически.', 'rvn-compare' )
 			. '</p>';
 
+		// ---- Базовые (core) поля ----
+		$core   = $fields->core_fields_customized();
+		$saved  = (array) $this->setting_value( $all, 'core_fields', array() );
+		$saved  = empty( $saved ) ? array() : $saved;
+
+		echo '<h3>' . esc_html__( 'Основные поля', 'rvn-compare' ) . '</h3>';
+		echo '<ul class="rvn-compare-sort rvn-compare-sort--fields" data-rvn-compare-sort="core-fields">';
+		foreach ( $core as $field ) {
+			$key = $field['key'];
+			$override = isset( $saved[ $key ] ) && is_array( $saved[ $key ] ) ? $saved[ $key ] : array();
+			$enabled = array_key_exists( 'enabled', $override ) ? ! empty( $override['enabled'] ) : ! empty( $field['enabled'] );
+			$label   = isset( $override['label'] ) && $override['label'] ? $override['label'] : ( isset( $field['label'] ) ? $field['label'] : $key );
+			$hint    = isset( $override['hint'] ) ? $override['hint'] : ( isset( $field['hint'] ) ? $field['hint'] : '' );
+			$group   = isset( $override['group'] ) && $override['group'] ? $override['group'] : ( isset( $field['group'] ) ? $field['group'] : 'basic' );
+
+			echo '<li class="rvn-compare-sort__item" data-core-field="' . esc_attr( $key ) . '">';
+			echo '<span class="rvn-compare-sort__handle" aria-hidden="true">⠿</span>';
+			echo '<label class="rvn-compare-sort__toggle"><input type="checkbox" name="core_fields[' . esc_attr( $key ) . '][enabled]" value="1" ' . checked( $enabled, true, false ) . ' /> ' . esc_html__( 'Вкл', 'rvn-compare' ) . '</label>';
+			echo '<input type="text" name="core_fields[' . esc_attr( $key ) . '][label]" value="' . esc_attr( $label ) . '" class="regular-text" placeholder="' . esc_attr__( 'Название (пусто = дефолт)', 'rvn-compare' ) . '" />';
+			echo '<input type="text" name="core_fields[' . esc_attr( $key ) . '][hint]" value="' . esc_attr( $hint ) . '" class="regular-text" placeholder="' . esc_attr__( 'Подсказка [?]', 'rvn-compare' ) . '" />';
+			echo '<select name="core_fields[' . esc_attr( $key ) . '][group]">';
+			foreach ( $groups as $gk => $gl ) {
+				printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $gk ), selected( $group, $gk, false ), esc_html( $gl ) );
+			}
+			echo '</select>';
+			echo '</li>';
+		}
+		echo '</ul>';
+
+		// ---- ACF / Custom Meta ----
 		echo '<h3>' . esc_html__( 'ACF / Custom Meta', 'rvn-compare' ) . '</h3>';
 		echo '<p class="description">' . esc_html__( 'Ручной список meta-ключей: добавьте ключ, название и группу. Поддерживаются scalar-значения.', 'rvn-compare' ) . '</p>';
 
@@ -376,8 +413,7 @@ final class RVN_Compare_Admin {
 			echo '<td><input type="text" name="acf_meta_fields[' . (int) $i . '][meta_key]" value="' . esc_attr( isset( $row['meta_key'] ) ? $row['meta_key'] : '' ) . '" class="regular-text" /></td>';
 			echo '<td><input type="text" name="acf_meta_fields[' . (int) $i . '][label]" value="' . esc_attr( isset( $row['label'] ) ? $row['label'] : '' ) . '" class="regular-text" /></td>';
 			echo '<td><select name="acf_meta_fields[' . (int) $i . '][group]">';
-			$group_labels = $fields->group_labels();
-			foreach ( $group_labels as $gk => $gl ) {
+			foreach ( $groups as $gk => $gl ) {
 				printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $gk ), selected( isset( $row['group'] ) ? $row['group'] : 'specs', $gk, false ), esc_html( $gl ) );
 			}
 			echo '</select></td>';
@@ -410,18 +446,23 @@ final class RVN_Compare_Admin {
 		if ( empty( $groups ) ) {
 			echo '<p class="description">' . esc_html__( 'Пока групп нет.', 'rvn-compare' ) . '</p>';
 		} else {
-			echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Название', 'rvn-compare' ) . '</th><th>' . esc_html__( 'Категории', 'rvn-compare' ) . '</th></tr></thead><tbody>';
-			foreach ( $groups as $group ) {
-				echo '<tr><td><strong>' . esc_html( $group['name'] ) . '</strong></td><td>';
+			echo '<ul class="rvn-compare-catgroups">';
+			foreach ( $groups as $index => $group ) {
 				$names = array();
 				foreach ( $group['cats'] as $cat_id ) {
 					$term = get_term( (int) $cat_id );
 					$names[] = ( $term && ! is_wp_error( $term ) ) ? $term->name : ( '#' . (int) $cat_id );
 				}
-				echo esc_html( implode( ', ', $names ) );
-				echo '</td></tr>';
+				echo '<li class="rvn-compare-catgroups__item">';
+				echo '<input type="text" name="category_groups[' . (int) $index . '][name]" value="' . esc_attr( $group['name'] ) . '" class="regular-text" />';
+				foreach ( $group['cats'] as $cat_id ) {
+					echo '<input type="hidden" name="category_groups[' . (int) $index . '][cats][]" value="' . (int) $cat_id . '" />';
+				}
+				echo '<span class="rvn-compare-catgroups__cats">' . esc_html( implode( ', ', $names ) ) . '</span>';
+				echo '<button type="button" class="button-link rvn-compare-del-catgroup" data-del-catgroup="' . (int) $index . '">' . esc_html__( 'Удалить', 'rvn-compare' ) . '</button>';
+				echo '</li>';
 			}
-			echo '</tbody></table>';
+			echo '</ul>';
 		}
 
 		echo '<h3>' . esc_html__( 'Добавить группу', 'rvn-compare' ) . '</h3>';
@@ -433,10 +474,9 @@ final class RVN_Compare_Admin {
 			foreach ( $terms as $term ) {
 				$disabled = in_array( (int) $term->term_id, $taken, true ) ? ' disabled="disabled"' : '';
 				printf(
-					'<option value="%1$d"%2$s%3$s>%4$s</option>',
+					'<option value="%1$d"%2$s>%3$s</option>',
 					(int) $term->term_id,
 					$disabled,
-					'',
 					esc_html( $term->name )
 				);
 			}
@@ -445,7 +485,7 @@ final class RVN_Compare_Admin {
 		echo '</p>';
 		echo '<p><label for="category_groups_new_name">' . esc_html__( 'Название группы', 'rvn-compare' ) . '</label> ';
 		echo '<input type="text" id="category_groups_new_name" name="category_groups_new_name" class="regular-text" placeholder="' . esc_attr__( 'Например: Смартфоны', 'rvn-compare' ) . '" /></p>';
-		echo '<p class="description">' . esc_html__( 'Выберите одну или несколько категорий (Ctrl/Cmd — множественный выбор) и введите название.', 'rvn-compare' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Выберите одну или несколько категорий (Ctrl/Cmd — множественный выбор) и введите название. Категории уже занятые группами недоступны.', 'rvn-compare' ) . '</p>';
 	}
 
 	/**
@@ -1110,7 +1150,8 @@ final class RVN_Compare_Admin {
 	 * @return void
 	 */
 	private function handle_fields_save() {
-		$settings = RVN_Compare_Settings::instance();
+		$settings  = RVN_Compare_Settings::instance();
+		$categories = RVN_Compare_Categories::instance();
 
 		// Скалярные чекбоксы/текст этой вкладки.
 		$settings->save_from_request( wp_unslash( $_POST ) );
@@ -1122,26 +1163,47 @@ final class RVN_Compare_Admin {
 			$complex['field_groups'] = $_POST['field_groups']; // wp_unslash применится внутри.
 		}
 
+		// Новая группа характеристик (field_groups_new — вне существующего списка).
+		if ( isset( $_POST['field_groups_new'] ) && '' !== trim( (string) $_POST['field_groups_new'] ) ) {
+			$complex['field_groups_new'] = sanitize_text_field( wp_unslash( $_POST['field_groups_new'] ) );
+		}
+
+		if ( isset( $_POST['core_fields'] ) && is_array( $_POST['core_fields'] ) ) {
+			$complex['core_fields'] = $_POST['core_fields'];
+		}
+
 		if ( isset( $_POST['acf_meta_fields'] ) && is_array( $_POST['acf_meta_fields'] ) ) {
 			$complex['acf_meta_fields'] = $_POST['acf_meta_fields'];
 		}
 
 		/*
-		 * Создание группы категорий: выбранные категории + название приходят
-		 * из полей category_groups_new[] / category_groups_new_name.
-		 * Уже существующие группы передаются как есть (категории без изменения).
+		 * Группы категорий: rebuild полного списка — существующие группы
+		 * (переименование/удаление) + новая группа из category_groups_new.
 		 */
-		if ( isset( $_POST['category_groups_new'] ) && is_array( $_POST['category_groups_new'] ) ) {
-			$new_cats = array_values( array_filter( array_map( 'absint', $_POST['category_groups_new'] ) ) );
-			$new_name = isset( $_POST['category_groups_new_name'] ) ? sanitize_text_field( wp_unslash( $_POST['category_groups_new_name'] ) ) : '';
-			if ( $new_name && ! empty( $new_cats ) ) {
-				$current = RVN_Compare_Categories::instance()->groups();
-				$current[] = array( 'name' => $new_name, 'cats' => $new_cats );
-				$complex['category_groups'] = $current;
+		$current     = $categories->groups();
+		$groups_raw  = isset( $_POST['category_groups'] ) && is_array( $_POST['category_groups'] ) ? $_POST['category_groups'] : array();
+		$deleted     = isset( $_POST['category_groups_delete'] ) && is_array( $_POST['category_groups_delete'] ) ? array_keys( $_POST['category_groups_delete'] ) : array();
+
+		$kept = array();
+		foreach ( $current as $index => $group ) {
+			if ( in_array( (string) $index, $deleted, true ) || in_array( (int) $index, array_map( 'absint', $deleted ), true ) ) {
+				continue;
 			}
-		} elseif ( isset( $_POST['category_groups'] ) && is_array( $_POST['category_groups'] ) ) {
-			$complex['category_groups'] = $_POST['category_groups'];
+			$name = isset( $groups_raw[ $index ]['name'] ) ? sanitize_text_field( wp_unslash( $groups_raw[ $index ]['name'] ) ) : $group['name'];
+			$cats = isset( $groups_raw[ $index ]['cats'] ) ? array_values( array_filter( array_map( 'absint', (array) $groups_raw[ $index ]['cats'] ) ) ) : $group['cats'];
+
+			if ( '' !== $name && ! empty( $cats ) ) {
+				$kept[] = array( 'name' => $name, 'cats' => $cats );
+			}
 		}
+
+		$new_cats = isset( $_POST['category_groups_new'] ) && is_array( $_POST['category_groups_new'] ) ? array_values( array_filter( array_map( 'absint', $_POST['category_groups_new'] ) ) ) : array();
+		$new_name = isset( $_POST['category_groups_new_name'] ) ? sanitize_text_field( wp_unslash( $_POST['category_groups_new_name'] ) ) : '';
+		if ( $new_name && ! empty( $new_cats ) ) {
+			$kept[] = array( 'name' => $new_name, 'cats' => $new_cats );
+		}
+
+		$complex['category_groups'] = $kept;
 
 		if ( ! empty( $complex ) ) {
 			$settings->save_compare_ui( $complex );

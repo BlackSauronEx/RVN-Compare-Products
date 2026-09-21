@@ -97,6 +97,7 @@ final class RVN_Compare_Settings {
 				'dimensions' => $is_ru ? 'Вес и размеры' : 'Weight and dimensions',
 				'specs' => $is_ru ? 'Характеристики' : 'Specifications',
 			),
+			'core_fields'                      => array(),
 			'fields'                           => array(),
 			'category_groups'                  => array(),
 			'acf_meta_fields'                  => array(),
@@ -609,6 +610,26 @@ final class RVN_Compare_Settings {
 	 */
 
 	/**
+	 * Подбирает уникальный slug для новой группы характеристик.
+	 *
+	 * @param string $base   Базовый slug.
+	 * @param array  $groups Существующие ключи => label.
+	 * @return string
+	 */
+	private function unique_group_key( $base, $groups ) {
+		$base = sanitize_key( $base );
+		if ( ! isset( $groups[ $base ] ) ) {
+			return $base;
+		}
+		$i = 2;
+		do {
+			$candidate = $base . '-' . $i;
+			$i++;
+		} while ( isset( $groups[ $candidate ] ) );
+		return $candidate;
+	}
+
+	/**
 	 * Применяет правки полей/групп/категорий из данных формы админки.
 	 *
 	 * Принимает структурированные массивы, санитизирует и пишет в опцию,
@@ -625,10 +646,20 @@ final class RVN_Compare_Settings {
 			foreach ( $raw['field_groups'] as $key => $label ) {
 				$key   = sanitize_key( $key );
 				$label = sanitize_text_field( wp_unslash( $label ) );
-				if ( $label ) {
+				if ( $label && ! isset( $groups[ $key ] ) ) {
 					$groups[ $key ] = $label;
 				}
 			}
+
+			// Новая группа (из field_groups_new): ключ генерируем уникальный.
+			if ( isset( $raw['field_groups_new'] ) && '' !== trim( (string) $raw['field_groups_new'] ) ) {
+				$label = sanitize_text_field( wp_unslash( $raw['field_groups_new'] ) );
+				if ( $label ) {
+					$key = $this->unique_group_key( 'group', $groups );
+					$groups[ $key ] = $label;
+				}
+			}
+
 			if ( ! empty( $groups ) ) {
 				$all['field_groups'] = $groups;
 			}
@@ -651,6 +682,26 @@ final class RVN_Compare_Settings {
 			$all['fields'] = $fields;
 		}
 
+		if ( isset( $raw['core_fields'] ) && is_array( $raw['core_fields'] ) ) {
+			// Упорядоченная карта key => ['enabled','label','hint','group'].
+			// Порядок вставки сохраняет порядок DOM-строк (drag&drop).
+			$core = array();
+			foreach ( $raw['core_fields'] as $key => $field ) {
+				$key = sanitize_key( $key );
+				if ( ! is_array( $field ) ) {
+					$core[ $key ] = array( 'enabled' => 1, 'label' => '', 'hint' => '', 'group' => 'basic' );
+					continue;
+				}
+				$core[ $key ] = array(
+					'enabled' => isset( $field['enabled'] ) ? 1 : 0,
+					'label'   => isset( $field['label'] ) ? sanitize_text_field( wp_unslash( $field['label'] ) ) : '',
+					'hint'    => isset( $field['hint'] ) ? sanitize_text_field( wp_unslash( $field['hint'] ) ) : '',
+					'group'   => isset( $field['group'] ) ? sanitize_key( (string) $field['group'] ) : 'basic',
+				);
+			}
+			$all['core_fields'] = $core;
+		}
+
 		if ( isset( $raw['acf_meta_fields'] ) && is_array( $raw['acf_meta_fields'] ) ) {
 			$meta = array();
 			foreach ( $raw['acf_meta_fields'] as $index => $field ) {
@@ -669,17 +720,23 @@ final class RVN_Compare_Settings {
 		}
 
 		if ( isset( $raw['category_groups'] ) && is_array( $raw['category_groups'] ) ) {
-			$cats = array();
-			foreach ( $raw['category_groups'] as $group ) {
-				if ( ! is_array( $group ) || empty( $group['cats'] ) ) {
-					continue;
-				}
-			$cats[] = array(
-				'name' => isset( $group['name'] ) ? sanitize_text_field( wp_unslash( $group['name'] ) ) : '',
-				'cats' => array_values( array_filter( array_map( 'absint', (array) $group['cats'] ) ) ),
-			);
+			$all['category_groups'] = RVN_Compare_Categories::instance()->sanitize_groups( $raw['category_groups'] );
 		}
-		$all['category_groups'] = $cats;
+
+		// Нормализация: поля, ссылающиеся на удалённую группу, переносим
+		// в группу «Характеристики», чтобы не плодить «осиротевшие» группы.
+		$valid_groups = array_keys( (array) $all['field_groups'] );
+		if ( ! empty( $valid_groups ) ) {
+			foreach ( (array) $all['core_fields'] as $key => $field ) {
+				if ( is_array( $field ) && isset( $field['group'] ) && ! in_array( $field['group'], $valid_groups, true ) ) {
+					$all['core_fields'][ $key ]['group'] = 'specs';
+				}
+			}
+			foreach ( (array) $all['acf_meta_fields'] as $key => $field ) {
+				if ( is_array( $field ) && isset( $field['group'] ) && ! in_array( $field['group'], $valid_groups, true ) ) {
+					$all['acf_meta_fields'][ $key ]['group'] = 'specs';
+				}
+			}
 		}
 
 		$this->replace( $all );

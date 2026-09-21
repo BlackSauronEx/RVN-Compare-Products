@@ -246,6 +246,145 @@
 		refreshElementsPreview( root );
 	}
 
+	/**
+	 * Перетаскивание элементов списков-конструкторов (группы / core-поля)
+	 * без jQuery: drag handle ⠿ двигает элемент выше/ниже.
+	 *
+	 * @param {Element[]|NodeList} lists Контейнеры [data-rvn-compare-sort].
+	 */
+	function initSortableLists( lists ) {
+		var dragging = null;
+
+		Array.prototype.forEach.call( lists, function ( list ) {
+			var items = list.querySelectorAll( ':scope > .rvn-compare-sort__item' );
+
+			Array.prototype.forEach.call( items, function ( item ) {
+				var handle = item.querySelector( '.rvn-compare-sort__handle' );
+				if ( ! handle ) {
+					return;
+				}
+
+				// Перетаскивание разрешаем только за ручку.
+				handle.addEventListener( 'mousedown', function () {
+					item.setAttribute( 'draggable', 'true' );
+				} );
+				handle.addEventListener( 'mouseup', function () {
+					item.removeAttribute( 'draggable' );
+				} );
+
+				item.addEventListener( 'dragstart', function ( e ) {
+					dragging = item;
+					item.classList.add( 'is-dragging' );
+					e.dataTransfer.effectAllowed = 'move';
+					try {
+						e.dataTransfer.setData( 'text/plain', '' );
+					} catch ( err ) { /* пусто */ }
+				} );
+
+				item.addEventListener( 'dragend', function () {
+					item.classList.remove( 'is-dragging' );
+					item.removeAttribute( 'draggable' );
+					dragging = null;
+				} );
+			} );
+
+			list.addEventListener( 'dragover', function ( e ) {
+				e.preventDefault();
+				e.dataTransfer.dropEffect = 'move';
+
+				if ( ! dragging ) {
+					return;
+				}
+				var after = document.elementFromPoint( e.clientX, e.clientY );
+				var target = after && after.closest ? after.closest( '.rvn-compare-sort__item' ) : null;
+				if ( target && target !== dragging && target.parentNode === list ) {
+					var rect = target.getBoundingClientRect();
+					var before = ( e.clientY - rect.top ) < ( rect.height / 2 );
+					list.insertBefore( dragging, before ? target : target.nextSibling );
+				}
+			} );
+
+			list.addEventListener( 'drop', function ( e ) {
+				e.preventDefault();
+			} );
+		} );
+	}
+
+	/**
+	 * UI групп характеристик и групп категорий: удаление (hidden-маркеры),
+	 * добавление группы характеристик.
+	 */
+	function bindFieldGroupsUI() {
+		document.addEventListener( 'click', function ( e ) {
+			var target = e.target;
+
+			// Удаление группы характеристик.
+			var delGroup = target.closest ? target.closest( '[data-del-group]' ) : null;
+			if ( delGroup ) {
+				e.preventDefault();
+				var item = delGroup.closest( '.rvn-compare-sort__item' );
+				if ( item ) {
+					item.parentNode.removeChild( item );
+				}
+				return;
+			}
+
+			// Добавление группы характеристик.
+			var addGroup = target.closest ? target.closest( '[data-add-group]' ) : null;
+			if ( addGroup ) {
+				e.preventDefault();
+				var input = document.getElementById( 'field_groups_new' );
+				var list = document.querySelector( '[data-rvn-compare-sort="groups"]' );
+				if ( input && input.value && list ) {
+					var slug = 'group-' + Date.now().toString( 36 );
+					var li = document.createElement( 'li' );
+					li.className = 'rvn-compare-sort__item';
+					var handle = document.createElement( 'span' );
+					handle.className = 'rvn-compare-sort__handle';
+					handle.setAttribute( 'aria-hidden', 'true' );
+					handle.textContent = '⠿';
+					var field = document.createElement( 'input' );
+					field.type = 'text';
+					field.name = 'field_groups[' + slug + ']';
+					field.value = input.value;
+					field.className = 'regular-text';
+					var del = document.createElement( 'button' );
+					del.type = 'button';
+					del.className = 'button-link rvn-compare-del-group';
+					del.setAttribute( 'data-del-group', slug );
+					del.textContent = 'Удалить';
+					li.appendChild( handle );
+					li.appendChild( field );
+					li.appendChild( del );
+					list.appendChild( li );
+					input.value = '';
+				}
+				return;
+			}
+
+			// Удаление группы категорий: прячем строку и оставляем маркер
+			// category_groups_delete[idx]=1 в форме (сабмит сохранит данные).
+			var delCat = target.closest ? target.closest( '[data-del-catgroup]' ) : null;
+			if ( delCat ) {
+				e.preventDefault();
+				var idx = delCat.getAttribute( 'data-del-catgroup' );
+				var li = delCat.closest( '.rvn-compare-catgroups__item' );
+				if ( li ) {
+					li.classList.add( 'is-hidden' );
+					var flag = li.querySelector( 'input[name="category_groups_delete[' + idx + ']"]' );
+					if ( ! flag ) {
+						flag = document.createElement( 'input' );
+						flag.type = 'hidden';
+						flag.name = 'category_groups_delete[' + idx + ']';
+						flag.value = '1';
+						li.appendChild( flag );
+					}
+				}
+				return;
+			}
+		} );
+	}
+
 	function init() {
 		// Color picker на полях с классом .rvn-compare-color.
 		var fields = document.querySelectorAll( '.rvn-compare-color' );
@@ -264,6 +403,13 @@
 		if ( elems ) {
 			bindElementsPreview( elems );
 		}
+
+		var sorts = document.querySelectorAll( '[data-rvn-compare-sort]' );
+		if ( sorts.length ) {
+			initSortableLists( sorts );
+		}
+
+		bindFieldGroupsUI();
 	}
 
 	if ( document.readyState === 'loading' ) {

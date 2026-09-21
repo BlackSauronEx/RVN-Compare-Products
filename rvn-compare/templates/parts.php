@@ -40,7 +40,9 @@ $buy_bottom      = isset( $settings_design['behavior']['buy_bottom'] ) ? $settin
 $buy_floating    = isset( $settings_design['behavior']['buy_floating'] ) ? $settings_design['behavior']['buy_floating'] : $def_design['behavior']['buy_floating'];
 $photo_fit       = isset( $settings_design['geometry']['photo_fit'] ) ? $settings_design['geometry']['photo_fit'] : $def_design['geometry']['photo_fit'];
 
-$show_stock = '1' === (string) $settings->get( 'show_stock', '1' );
+$show_stock    = '1' === (string) $settings->get( 'show_stock', '1' );
+$can_collapse  = '1' === (string) $settings->get( 'collapse_groups', '1' );
+$default_state = (string) $settings->get( 'groups_default_state', 'expanded' );
 
 $columns = array(
 	'desktop' => (int) $settings->get( 'columns_desktop', 5 ),
@@ -112,20 +114,27 @@ $count = count( $ids );
 					$labels = RVN_Compare_Fields::instance()->group_labels();
 					$group_label = isset( $labels[ $group_key ] ) ? $labels[ $group_key ] : ucfirst( str_replace( array( '-', '_' ), ' ', $group_key ) );
 					?>
-					<div class="rvn-compare-group" data-rvn-compare-group="<?php echo esc_attr( $group_key ); ?>">
+					<div class="rvn-compare-group<?php echo ( $can_collapse && 'collapsed' === $default_state ) ? ' is-collapsed' : ''; ?>" data-rvn-compare-group="<?php echo esc_attr( $group_key ); ?>">
+						<?php if ( $can_collapse ) : ?>
 						<button type="button" class="rvn-compare-group__head" data-rvn-compare-group-toggle>
 							<span class="rvn-compare-group__title"><?php echo esc_html( $group_label ); ?></span>
 							<span class="rvn-compare-group__arrow" aria-hidden="true">▲</span>
 						</button>
+						<?php else : ?>
+						<div class="rvn-compare-group__head rvn-compare-group__head--static"><span class="rvn-compare-group__title"><?php echo esc_html( $group_label ); ?></span></div>
+						<?php endif; ?>
 
 						<div class="rvn-compare-group__body">
 							<?php foreach ( $rows as $row ) :
 								$field = $row['field'];
 								?>
 								<div class="rvn-compare-row<?php echo $row['diff'] ? ' has-diff' : ''; ?>" data-rvn-compare-row>
-									<div class="rvn-compare-row__label">
-										<span><?php echo esc_html( $field['label'] ); ?></span>
-									</div>
+							<div class="rvn-compare-row__label">
+								<span><?php echo esc_html( $field['label'] ); ?></span>
+								<?php if ( ! empty( $field['hint'] ) ) : ?>
+									<button type="button" class="rvn-compare-tip" data-rvn-compare-tip="<?php echo esc_attr( $field['hint'] ); ?>" aria-label="<?php esc_attr_e( 'Подсказка', 'rvn-compare' ); ?>">?</button>
+								<?php endif; ?>
+							</div>
 									<div class="rvn-compare-row__values" data-rvn-compare-row-values>
 										<?php foreach ( $row['values'] as $value ) : ?>
 											<span class="rvn-compare-row__value"><?php echo esc_html( $value ); ?></span>

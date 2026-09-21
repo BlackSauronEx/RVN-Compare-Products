@@ -59,30 +59,88 @@ final class RVN_Compare_Fields {
 	 */
 	public function group_labels() {
 		$labels = (array) RVN_Compare_Settings::instance()->get( 'field_groups', array() );
-
-		return array(
-			self::GROUP_BASIC      => isset( $labels['basic'] ) && $labels['basic'] ? $labels['basic'] : __( 'Основное', 'rvn-compare' ),
-			self::GROUP_DIMENSIONS => isset( $labels['dimensions'] ) && $labels['dimensions'] ? $labels['dimensions'] : __( 'Вес и размеры', 'rvn-compare' ),
-			self::GROUP_SPECS      => isset( $labels['specs'] ) && $labels['specs'] ? $labels['specs'] : __( 'Характеристики', 'rvn-compare' ),
+		$defaults = array(
+			self::GROUP_BASIC      => __( 'Основное', 'rvn-compare' ),
+			self::GROUP_DIMENSIONS => __( 'Вес и размеры', 'rvn-compare' ),
+			self::GROUP_SPECS      => __( 'Характеристики', 'rvn-compare' ),
 		);
+		$labels = wp_parse_args( $labels, $defaults );
+
+		// Оставляем только непустые названия; порядок — из настроек (drag&drop).
+		$out = array();
+		foreach ( $labels as $key => $label ) {
+			$key = sanitize_key( $key );
+			if ( $key && '' !== trim( (string) $label ) ) {
+				$out[ $key ] = (string) $label;
+			}
+		}
+
+		return $out;
 	}
 
 	/**
-	 * Core-поля в порядке §6.2 (без полного описания — оно вставляется последним).
+	 * Base core-поля в порядке §6.2 (без полного описания — оно вставляется последним).
 	 *
 	 * @return array[]
 	 */
 	private function core_fields() {
 		return array(
-			array( 'key' => 'price',             'label' => __( 'Цена', 'rvn-compare' ),              'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:price' ),
-			array( 'key' => 'sku',               'label' => __( 'Артикул', 'rvn-compare' ),            'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:sku' ),
-			array( 'key' => 'rating',            'label' => __( 'Рейтинг', 'rvn-compare' ),            'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:rating' ),
-			array( 'key' => 'stock',             'label' => __( 'Наличие', 'rvn-compare' ),            'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:stock' ),
-			array( 'key' => 'short_description', 'label' => __( 'Краткое описание', 'rvn-compare' ),   'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:short_description' ),
-			array( 'key' => 'weight',            'label' => __( 'Вес', 'rvn-compare' ),                'group' => self::GROUP_DIMENSIONS, 'enabled' => true,  'source' => 'core:weight' ),
-			array( 'key' => 'dimensions',        'label' => __( 'Размеры', 'rvn-compare' ),            'group' => self::GROUP_DIMENSIONS, 'enabled' => true,  'source' => 'core:dimensions' ),
-			array( 'key' => 'full_description',  'label' => __( 'Полное описание', 'rvn-compare' ),    'group' => self::GROUP_SPECS,      'enabled' => false, 'source' => 'core:full_description' ),
+			array( 'key' => 'price',             'label' => __( 'Цена', 'rvn-compare' ),              'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:price',             'hint' => '' ),
+			array( 'key' => 'sku',               'label' => __( 'Артикул', 'rvn-compare' ),            'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:sku',               'hint' => '' ),
+			array( 'key' => 'rating',            'label' => __( 'Рейтинг', 'rvn-compare' ),            'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:rating',            'hint' => '' ),
+			array( 'key' => 'stock',             'label' => __( 'Наличие', 'rvn-compare' ),            'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:stock',             'hint' => '' ),
+			array( 'key' => 'short_description', 'label' => __( 'Краткое описание', 'rvn-compare' ),   'group' => self::GROUP_BASIC,      'enabled' => true,  'source' => 'core:short_description', 'hint' => '' ),
+			array( 'key' => 'weight',            'label' => __( 'Вес', 'rvn-compare' ),                'group' => self::GROUP_DIMENSIONS, 'enabled' => true,  'source' => 'core:weight',            'hint' => '' ),
+			array( 'key' => 'dimensions',        'label' => __( 'Размеры', 'rvn-compare' ),            'group' => self::GROUP_DIMENSIONS, 'enabled' => true,  'source' => 'core:dimensions',        'hint' => '' ),
+			array( 'key' => 'full_description',  'label' => __( 'Полное описание', 'rvn-compare' ),    'group' => self::GROUP_SPECS,      'enabled' => false, 'source' => 'core:full_description',  'hint' => '' ),
 		);
+	}
+
+	/**
+	 * Core-поля с применением сохранённых настроек (вкл/название/подсказка/группа/порядок).
+	 *
+	 * @return array[]
+	 */
+	public function core_fields_customized() {
+		$base = $this->core_fields();
+		$saved = (array) RVN_Compare_Settings::instance()->get( 'core_fields', array() );
+
+		// Если настроек порядка нет — дефолтный порядок без изменений.
+		if ( empty( $saved ) ) {
+			return $base;
+		}
+
+		$keyed = array();
+		foreach ( $base as $field ) {
+			$keyed[ $field['key'] ] = $field;
+		}
+
+		// Порядок — из сохранённой карты; неизвестные ключи (ушли из base) не трогаем.
+		$ordered = array();
+		foreach ( $saved as $key => $override ) {
+			if ( isset( $keyed[ $key ] ) ) {
+				$field = $keyed[ $key ];
+				$field['enabled'] = ! empty( $override['enabled'] );
+				if ( isset( $override['label'] ) && $override['label'] ) {
+					$field['label'] = $override['label'];
+				}
+				$field['hint'] = isset( $override['hint'] ) ? $override['hint'] : '';
+				if ( isset( $override['group'] ) && $override['group'] ) {
+					$field['group'] = $override['group'];
+				}
+				$ordered[] = $field;
+				unset( $keyed[ $key ] );
+			}
+		}
+
+		// Оставшиеся (новые core-поля будущих версий) дописываем в конец.
+		foreach ( $base as $field ) {
+			if ( isset( $keyed[ $field['key'] ] ) ) {
+				$ordered[] = $keyed[ $field['key'] ];
+			}
+		}
+
+		return $ordered;
 	}
 
 	/**
@@ -182,27 +240,13 @@ final class RVN_Compare_Fields {
 			}
 		}
 
-		// Core-поля; полное описание — отдельно (вставляется последним).
-		$core = $this->core_fields();
-		$full = null;
-		foreach ( $core as $index => $field ) {
-			if ( 'full_description' === $field['key'] ) {
-				$full = $field;
-				unset( $core[ $index ] );
-			}
-		}
-		$core = array_values( $core );
+		// Core-поля (порядок — пользовательский, drag&drop), затем атрибуты и meta.
+		$core = $this->core_fields_customized();
 
 		$attrs = $this->attribute_fields( $products );
 		$meta  = $this->meta_fields();
 
-		$fields = array_merge( $core, $attrs, $meta );
-
-		if ( $full ) {
-			$fields[] = $full;
-		}
-
-		return $fields;
+		return array_merge( $core, $attrs, $meta );
 	}
 
 	/**
