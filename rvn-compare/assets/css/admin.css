@@ -1,0 +1,389 @@
+/**
+ * RVN Compare — стили админки.
+ */
+
+.rvn-compare-admin .nav-tab-wrapper {
+	margin-bottom: 16px;
+}
+
+.rvn-compare-admin .form-table th {
+	width: 280px;
+}
+
+.rvn-compare-reset {
+	margin-top: 8px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+}
+
+.rvn-compare-inline-form {
+	display: inline-block;
+	margin-right: 12px;
+}
+
+.rvn-compare-inline-form .button {
+	vertical-align: top;
+}
+
+.rvn-compare-page-actions {
+	margin: 0 0 8px;
+}
+
+.rvn-compare-color {
+	width: 90px;
+}
+
+/* Секция исключений товаров */
+.rvn-compare-exclusions {
+	display: flex;
+	gap: 32px;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	margin: 0 0 24px;
+}
+
+.rvn-compare-exclusions__add {
+	flex: 0 0 340px;
+}
+
+.rvn-compare-exclusions__list {
+	flex: 1 1 420px;
+	max-width: 640px;
+}
+
+.rvn-compare-exclusions__list th {
+	width: auto;
+}
+
+.rvn-compare-exclusions__list td {
+	vertical-align: middle;
+}
+
+.rvn-compare-inline-del {
+	display: inline;
+}
+
+.rvn-compare-inline-del .button {
+	vertical-align: middle;
+}
+
+/* ===== Вкладка «Дизайн таблицы» ===== */
+
+.rvn-compare-design {
+	display: flex;
+	gap: 24px;
+	align-items: flex-start;
+}
+
+.rvn-compare-design__form {
+	flex: 1 1 560px;
+	max-width: 640px;
+}
+
+.rvn-compare-design__preview {
+	flex: 0 0 340px;
+	max-width: 360px;
+	position: sticky;
+	top: 64px;
+	z-index: 2;
+	box-sizing: border-box;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+}
+
+.rvn-compare-design__preview.is-sticky {
+	box-shadow: 0 8px 24px rgba( 0, 0, 0, 0.14 );
+}
+
+/* Демо-таблица превью: компактная сетка в миниатюре.
+ * Колонки превью не растягиваются JS-логикой слайдера (это только
+ * визуальный макет), поэтому ширина задана здесь жёстко. */
+.rvn-compare-design__preview .rvn-compare-preview {
+	--rvn-compare-radius-btn: 10px;
+	border-radius: var( --rvn-compare-radius );
+	padding: 8px;
+}
+
+.rvn-compare-design__preview .rvn-compare-preview .rvn-compare-clip {
+	overflow: visible;
+}
+
+.rvn-compare-design__preview .rvn-compare-columns {
+	display: flex;
+}
+
+.rvn-compare-design__preview .rvn-compare-corner {
+	flex: 0 0 92px;
+	position: static;
+}
+
+.rvn-compare-design__preview .rvn-compare-col {
+	flex: 1 1 0;
+	width: 110px;
+	min-width: 110px;
+}
+
+.rvn-compare-design__preview .rvn-compare-col__thumb {
+	display: block;
+	width: 100%;
+	height: var( --rvn-compare-photo-height );
+	background: linear-gradient( 135deg, #e6f0ff 0%, #dbeafe 100% );
+	border-radius: 8px;
+}
+
+.rvn-compare-design__preview .rvn-compare-row__label {
+	flex: 0 0 92px;
+	position: static;
+}
+
+.rvn-compare-design__preview .rvn-compare-row__value {
+	flex: 1 1 0;
+	width: 110px;
+	min-width: 110px;
+}
+
+.rvn-compare-design__preview .rvn-compare-group__head.is-soft {
+	border-bottom: 3px solid var( --rvn-compare-group-soft );
+	background-image: linear-gradient( to bottom, rgba( 0, 0, 0, 0.02 ), rgba( 0, 0, 0, 0.02 ) );
+}
+
+@media ( max-width: 1100px ) {
+	.rvn-compare-design {
+		flex-direction: column;
+	}
+
+	.rvn-compare-design__preview {
+		position: static;
+		max-width: none;
+		width: 100%;
+		flex: 1 1 auto;
+	}
+}
+
+/* ===== Вкладка «Дизайн элементов и кнопок» ===== */
+
+.rvn-compare-el-block {
+	margin: 0 0 20px;
+	padding: 12px 16px 16px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+}
+
+.rvn-compare-el-block h3 {
+	margin: 0 0 8px;
+	font-size: 14px;
+}
+
+.rvn-compare-el-styles {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px 16px;
+}
+
+.rvn-compare-el-style {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.rvn-compare-el-style input {
+	width: 92px;
+}
+
+.rvn-compare-elems__stage {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding: 24px 16px;
+	margin: 0 0 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	/* полосатая подложка в духе мокапа admin_button_preview.png */
+	background-image:
+		repeating-linear-gradient(45deg, #f6f7f7 0 12px, #eef0f1 12px 24px);
+}
+
+.rvn-compare-elems__stage .rvn-compare-toast {
+	position: static;
+	opacity: 1;
+	transform: none;
+	max-width: 320px;
+}
+
+/* ===== Вкладка «Таблица сравнения» (сортируемые списки) ===== */
+
+.rvn-compare-sort {
+	list-style: none;
+	margin: 8px 0 12px;
+	padding: 0;
+	max-width: 760px;
+}
+
+.rvn-compare-sort__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	margin: 0 0 4px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.rvn-compare-sort__item.is-dragging {
+	opacity: 0.5;
+	border-style: dashed;
+}
+
+.rvn-compare-sort__handle {
+	flex: 0 0 auto;
+	cursor: grab;
+	color: #8c8f94;
+	font-size: 16px;
+	line-height: 1;
+	user-select: none;
+}
+
+.rvn-compare-sort__item .regular-text {
+	margin: 0;
+}
+
+.rvn-compare-sort__toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+}
+
+.rvn-compare-sort__item select {
+	margin-left: auto;
+}
+
+.rvn-compare-catgroups {
+	list-style: none;
+	margin: 8px 0 12px;
+	padding: 0;
+	max-width: 760px;
+}
+
+.rvn-compare-catgroups__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	margin: 0 0 4px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.rvn-compare-catgroups__item.is-hidden {
+	display: none;
+}
+
+.rvn-compare-catgroups__cats {
+	flex: 1 1 auto;
+	color: #50575e;
+	font-size: 12px;
+}
+
+.rvn-compare-del-group,
+.rvn-compare-del-catgroup {
+	color: #b32d2e;
+}
+
+/* ===== Исключения: категории и очистка ===== */
+
+.rvn-compare-excl-cats {
+	list-style: none;
+	margin: 8px 0 12px;
+	padding: 0;
+}
+
+.rvn-compare-excl-cats li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0;
+}
+
+.rvn-compare-excl-clear {
+	margin: 8px 0;
+}
+
+/* ===== Вкладка «Справка» ===== */
+
+.rvn-compare-shortcodes th {
+	width: auto;
+}
+
+.rvn-compare-status th {
+	width: 240px;
+}
+
+.rvn-compare-faq {
+	margin: 0 0 16px;
+}
+
+.rvn-compare-faq h3 {
+	margin: 0 0 4px;
+	font-size: 14px;
+}
+
+.rvn-compare-faq p {
+	margin: 0 0 8px;
+	color: #50575e;
+}
+
+.rvn-compare-copy-btn {
+	white-space: nowrap;
+}
+
+/* ===== Вкладка «Дизайн таблицы»: кнопка «Купить» в превью ===== */
+
+.rvn-compare-design__preview .rvn-compare-buy {
+	display: inline-block;
+	margin-top: 6px;
+	padding: 6px 10px;
+	background: var( --rvn-compare-accent );
+	color: #fff;
+	font-size: 12px;
+	font-weight: 500;
+	text-decoration: none;
+	border-radius: var( --rvn-compare-radius-btn );
+	transition: background 0.15s, color 0.15s, filter 0.15s;
+}
+
+.rvn-compare-design__preview .rvn-compare-buy:hover {
+	color: #fff;
+	filter: brightness( 0.95 );
+}
+
+.rvn-compare-design__preview .rvn-compare-buy--theme {
+	background-color: transparent;
+	color: var( --rvn-compare-accent );
+	font-weight: 600;
+	border-radius: 0;
+}
+
+.rvn-compare-design__preview .rvn-compare-buy--theme:hover {
+	color: var( --rvn-compare-accent );
+	filter: none;
+}
+
+/* ===== Вкладка «Поля»: фильтр и вкл/выкл все ===== */
+
+.rvn-compare-fields-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 8px 0 4px;
+}
+
+.rvn-compare-sort--fields .rvn-compare-sort__item.is-hidden {
+	display: none;
+}
