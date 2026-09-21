@@ -1125,16 +1125,123 @@ final class RVN_Compare_Admin {
 	 * @return void
 	 */
 	private function render_help_tab() {
-		echo '<p>' . esc_html__( 'Краткая справка по шорткодам плагина.', 'rvn-compare' ) . '</p>';
-		echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Шорткод', 'rvn-compare' ) . '</th><th>' . esc_html__( 'Назначение', 'rvn-compare' ) . '</th></tr></thead><tbody>';
+		// ---- Шорткоды ----
+		echo '<h2 class="title">' . esc_html__( 'Шорткоды', 'rvn-compare' ) . '</h2>';
+		echo '<table class="widefat striped rvn-compare-shortcodes"><thead><tr>'
+			. '<th>' . esc_html__( 'Шорткод', 'rvn-compare' ) . '</th>'
+			. '<th>' . esc_html__( 'Назначение', 'rvn-compare' ) . '</th>'
+			. '<th>' . esc_html__( 'Аргументы', 'rvn-compare' ) . '</th>'
+			. '<th>' . esc_html__( 'Пример', 'rvn-compare' ) . '</th>'
+			. '<th></th></tr></thead><tbody>';
+
 		foreach ( RVN_Compare_Shortcodes::registry() as $tag => $info ) {
-			printf(
-				'<tr><td><code>%s</code></td><td>%s</td></tr>',
-				esc_html( $tag ),
-				esc_html( $info['description'] )
-			);
+			$example = isset( $info['example'] ) ? $info['example'] : '[' . $tag . ']';
+			echo '<tr>';
+			echo '<td><code>' . esc_html( $tag ) . '</code></td>';
+			echo '<td>' . esc_html( $info['description'] ) . '</td>';
+			echo '<td><code>' . esc_html( isset( $info['args'] ) ? $info['args'] : '' ) . '</code></td>';
+			echo '<td><code class="rvn-compare-copyable" data-rvn-compare-copy="' . esc_attr( $example ) . '">' . esc_html( $example ) . '</code></td>';
+			echo '<td><button type="button" class="button button-small rvn-compare-copy-btn" data-rvn-compare-copy="' . esc_attr( $example ) . '">' . esc_html__( 'Копировать', 'rvn-compare' ) . '</button></td>';
+			echo '</tr>';
 		}
 		echo '</tbody></table>';
+
+		// ---- Системный статус ----
+		echo '<h2 class="title">' . esc_html__( 'Системный статус', 'rvn-compare' ) . '</h2>';
+		echo '<table class="widefat striped rvn-compare-status"><tbody>';
+		foreach ( $this->system_status_rows() as $row ) {
+			echo '<tr><th>' . esc_html( $row[0] ) . '</th><td>' . $row[1] . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- values собраны через esc_*.
+		}
+		echo '</tbody></table>';
+
+		// ---- FAQ ----
+		echo '<h2 class="title">' . esc_html__( 'FAQ', 'rvn-compare' ) . '</h2>';
+		foreach ( $this->help_faq() as $faq ) {
+			echo '<div class="rvn-compare-faq">';
+			echo '<h3>' . esc_html( $faq['q'] ) . '</h3>';
+			echo '<p>' . esc_html( $faq['a'] ) . '</p>';
+			echo '</div>';
+		}
+
+		// ---- Остальное ----
+		echo '<h2 class="title">' . esc_html__( 'Автозагрузка страницы', 'rvn-compare' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Плагин пытается автоматически создать страницу со слагом rvn-compare при активации. Если она не появилась (или мешает другой плагин), создайте её вручную и вставьте шорткод:', 'rvn-compare' ) . '</p>';
+		echo '<p><code class="rvn-compare-copyable" data-rvn-compare-copy="[rvn-compare-table]">[rvn-compare-table]</code> <button type="button" class="button button-small rvn-compare-copy-btn" data-rvn-compare-copy="[rvn-compare-table]">' . esc_html__( 'Копировать', 'rvn-compare' ) . '</button></p>';
+	}
+
+	/**
+	 * Строки системного статуса для вкладки «Справка».
+	 *
+	 * @return array{string,string}[]
+	 */
+	private function system_status_rows() {
+		global $wp_version;
+
+		$wc_version = function_exists( 'WC' ) && defined( 'WOOCOMMERCE_VERSION' ) ? WOOCOMMERCE_VERSION : '—';
+
+		$hpos = __( 'Недоступно', 'rvn-compare' );
+		if ( class_exists( 'Automattic\\WooCommerce\\Utilities\\OrderUtil' ) && method_exists( 'Automattic\\WooCommerce\\Utilities\\OrderUtil', 'custom_orders_table_usage_is_enabled' ) ) {
+			$hpos = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ? __( 'Включено', 'rvn-compare' ) : __( 'Выключено', 'rvn-compare' );
+		}
+
+		$cache = __( 'Не обнаружен', 'rvn-compare' );
+		if ( class_exists( 'WP_Object_Cache' ) && wp_using_ext_object_cache() ) {
+			$cache = __( 'Внешний объектный кеш', 'rvn-compare' );
+		}
+
+		$theme = function_exists( 'wp_get_theme' ) ? wp_get_theme() : null;
+		$theme_name = $theme ? $theme->get( 'Name' ) . ' ' . $theme->get( 'Version' ) : '—';
+
+		return array(
+			array( __( 'WordPress', 'rvn-compare' ), esc_html( (string) $wp_version ) ),
+			array( __( 'WooCommerce', 'rvn-compare' ), esc_html( (string) $wc_version ) ),
+			array( __( 'PHP', 'rvn-compare' ), esc_html( PHP_VERSION ) ),
+			array( __( 'RVN Compare', 'rvn-compare' ), esc_html( RVN_COMPARE_VERSION ) ),
+			array( __( 'Тема', 'rvn-compare' ), esc_html( $theme_name ) ),
+			array( __( 'HPOS (заказы в таблицах)', 'rvn-compare' ), esc_html( $hpos ) ),
+			array( __( 'Объектный кеш', 'rvn-compare' ), esc_html( $cache ) ),
+			array( __( 'Страница сравнения', 'rvn-compare' ), $this->status_page_cell() ),
+		);
+	}
+
+	/**
+	 * Ячейка статуса страницы сравнения.
+	 *
+	 * @return string
+	 */
+	private function status_page_cell() {
+		$page_id = (int) RVN_Compare_Settings::instance()->get( 'compare_page_id', 0 );
+		if ( $page_id && get_post( $page_id ) ) {
+			$url = get_permalink( $page_id );
+			return '<a href="' . esc_url( $url ) . '" target="_blank">' . esc_html( get_the_title( $page_id ) ) . '</a> (ID ' . (int) $page_id . ')';
+		}
+		return esc_html__( '—', 'rvn-compare' );
+	}
+
+	/**
+	 * Вопросы-ответы для справки.
+	 *
+	 * @return array[] ['q'=>string, 'a'=>string]
+	 */
+	private function help_faq() {
+		return array(
+			array(
+				'q' => __( 'Кнопка сравнения не появляется на карточках. Почему?', 'rvn-compare' ),
+				'a' => __( 'Проверьте настройку позиции кнопки на вкладке «Основное» и правила «Где показывать». Товар может быть в исключениях (или в исключённой категории).', 'rvn-compare' ),
+			),
+			array(
+				'q' => __( 'Хочу изменить стиль кнопок и таблицы. Где это?', 'rvn-compare' ),
+				'a' => __( 'Вкладки «Дизайн таблицы» (цвета, типографика, геометрия) и «Дизайн элементов и кнопок» (кнопки, тосты) с живым предпросмотром.', 'rvn-compare' ),
+			),
+			array(
+				'q' => __( 'Как показать таблицу только для одной категории?', 'rvn-compare' ),
+				'a' => __( 'Используйте шорткод [rvn-compare-table group="g0"] с ключом нужной группы категорий, либо ids="12,34" для фиксированного набора товаров.', 'rvn-compare' ),
+			),
+			array(
+				'q' => __( 'Что будет при удалении плагина?', 'rvn-compare' ),
+				'a' => __( 'По умолчанию ничего не удаляется. Что стереть (настройки, списки пользователей, страницу) выбирается чекбоксами в разделе «Удаление данных» на вкладке «Основное».', 'rvn-compare' ),
+			),
+		);
 	}
 
 	/**

@@ -314,3 +314,31 @@
 .rvn-compare-excl-clear {
 	margin: 8px 0;
 }
+
+/* ===== Вкладка «Справка» ===== */
+
+.rvn-compare-shortcodes th {
+	width: auto;
+}
+
+.rvn-compare-status th {
+	width: 240px;
+}
+
+.rvn-compare-faq {
+	margin: 0 0 16px;
+}
+
+.rvn-compare-faq h3 {
+	margin: 0 0 4px;
+	font-size: 14px;
+}
+
+.rvn-compare-faq p {
+	margin: 0 0 8px;
+	color: #50575e;
+}
+
+.rvn-compare-copy-btn {
+	white-space: nowrap;
+}

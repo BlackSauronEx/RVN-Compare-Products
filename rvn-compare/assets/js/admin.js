@@ -385,6 +385,29 @@
 		} );
 	}
 
+	/**
+	 * Кнопки «Копировать» на вкладке «Справка» — копирование шорткода.
+	 */
+	function bindCopyShortcodes() {
+		document.addEventListener( 'click', function ( e ) {
+			var btn = e.target && e.target.closest ? e.target.closest( '[data-rvn-compare-copy]' ) : null;
+			if ( ! btn || btn.tagName === 'CODE' ) {
+				return;
+			}
+			e.preventDefault();
+			var text = btn.getAttribute( 'data-rvn-compare-copy' ) || '';
+			try {
+				navigator.clipboard.writeText( text ).then( function () {
+					var original = btn.textContent;
+					btn.textContent = '✓';
+					setTimeout( function () {
+						btn.textContent = original;
+					}, 1200 );
+				} ).catch( function () { /* игнорируем — тихий фолбэк ниже */ } );
+			} catch ( err ) { /* старые браузеры */ }
+		} );
+	}
+
 	function init() {
 		// Color picker на полях с классом .rvn-compare-color.
 		var fields = document.querySelectorAll( '.rvn-compare-color' );
@@ -410,6 +433,7 @@
 		}
 
 		bindFieldGroupsUI();
+		bindCopyShortcodes();
 	}
 
 	if ( document.readyState === 'loading' ) {

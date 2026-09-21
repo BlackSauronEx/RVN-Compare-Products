@@ -45,18 +45,28 @@ final class RVN_Compare_Shortcodes {
 		return array(
 			'rvn-compare-table'          => array(
 				'description' => __( 'Таблица сравнения товаров.', 'rvn-compare' ),
+				'args'        => 'class, group, ids',
+				'example'     => '[rvn-compare-table class="my-table" group="g0" ids="12,34,56"]',
 			),
 			'rvn-compare-counter-button' => array(
 				'description' => __( 'Кнопка «Сравнение» с живым счётчиком (для меню/шапки).', 'rvn-compare' ),
+				'args'        => 'class, link (0/1), layout, badge (0/1), url',
+				'example'     => '[rvn-compare-counter-button link="1" badge="1"]',
 			),
 			'rvn-compare-button'         => array(
 				'description' => __( 'Кнопка «Сравнить» для конкретного товара.', 'rvn-compare' ),
+				'args'        => 'id, class, layout',
+				'example'     => '[rvn-compare-button id="123"]',
 			),
 			'rvn-compare-counter'        => array(
 				'description' => __( 'Живой счётчик товаров в сравнении.', 'rvn-compare' ),
+				'args'        => 'class, text, text_position (before/after), url',
+				'example'     => '[rvn-compare-counter text="Товаров: " text_position="before"]',
 			),
 			'rvn-compare-clear'          => array(
 				'description' => __( 'Кнопка «Очистить всё» с подтверждением.', 'rvn-compare' ),
+				'args'        => 'class, text, confirm (0/1)',
+				'example'     => '[rvn-compare-clear text="Очистить" confirm="1"]',
 			),
 		);
 	}
