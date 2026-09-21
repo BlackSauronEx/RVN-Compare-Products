@@ -146,6 +146,8 @@ final class RVN_Compare_Assets {
 				'tablet'  => (int) $settings->get( 'columns_tablet', 3 ),
 				'mobile'  => (int) $settings->get( 'columns_mobile', 2 ),
 			),
+			'floatingOffset' => (string) $settings->get( 'floating_offset', '0px' ),
+			'photoFit'       => (string) $settings->get( 'photo_fit', 'contain' ),
 			'archivePosition' => (string) $settings->get( 'archive_button_position', 'after_add_to_cart' ),
 			'singlePosition'  => (string) $settings->get( 'single_button_position', 'after_add_to_cart' ),
 			'excluded'        => RVN_Compare_Settings::instance()->excluded_products(),

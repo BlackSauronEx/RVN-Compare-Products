@@ -67,6 +67,8 @@ final class RVN_Compare_Settings {
 			'columns_tablet'                   => 3,
 			'columns_mobile'                   => 2,
 			'accent_color'                     => '#2563eb',
+			'floating_offset'                  => '0px',
+			'photo_fit'                        => 'contain',
 			'animation_speed'                  => 300,
 			'toast_duration'                   => 3200,
 			'archive_button_position'          => 'after_add_to_cart',
@@ -278,6 +280,19 @@ final class RVN_Compare_Settings {
 				continue;
 			}
 
+			if ( 'floating_offset' === $key ) {
+				$sanitized[ $key ] = isset( $raw[ $key ] )
+					? sanitize_text_field( wp_unslash( $raw[ $key ] ) )
+					: $current[ $key ];
+				continue;
+			}
+
+			if ( 'photo_fit' === $key ) {
+				$value = isset( $raw[ $key ] ) ? sanitize_key( $raw[ $key ] ) : '';
+				$sanitized[ $key ] = in_array( $value, array( 'contain', 'cover' ), true ) ? $value : $current[ $key ];
+				continue;
+			}
+
 			if ( 'compare_page_id' === $key ) {
 				$sanitized[ $key ] = isset( $raw[ $key ] ) ? absint( $raw[ $key ] ) : absint( $current[ $key ] );
 				continue;
@@ -306,6 +321,8 @@ final class RVN_Compare_Settings {
 			'general'  => array(
 				'compare_page_id',
 				'auto_insert_table',
+				'floating_offset',
+				'photo_fit',
 				'max_items_total',
 				'max_items_per_context',
 				'breakpoint_tablet',

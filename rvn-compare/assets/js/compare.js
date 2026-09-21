@@ -265,50 +265,215 @@
 	}
 
 	/**
-	 * Привязывает интерактив таблицы: вкладки, «Только различия», группы.
+	 * Вычисляет число видимых колонок по текущей ширине окна.
 	 */
-	function initTable( scope ) {
-		var table = scope && scope.querySelector ? scope.querySelector( '.rvn-compare-table' ) : null;
-		if ( ! table ) {
+	function visibleColumns( scroller ) {
+		var w = window.innerWidth || document.documentElement.clientWidth;
+		var bp = CFG.breakpoints || { tablet: 1024, mobile: 768 };
+		var cols = CFG.columns || { desktop: 5, tablet: 3, mobile: 2 };
+
+		if ( w <= bp.mobile ) {
+			return parseInt( cols.mobile, 10 ) || 2;
+		}
+		if ( w <= bp.tablet ) {
+			return parseInt( cols.tablet, 10 ) || 3;
+		}
+		return parseInt( cols.desktop, 10 ) || 5;
+	}
+
+	/**
+	 * Синхронизирует ширину колонок и позицию плавающей панели со слайдером.
+	 */
+	function syncScroller( scroller ) {
+		var n = visibleColumns( scroller );
+		var clip = scroller.querySelector( '[data-rvn-compare-clip]' );
+		var colEls = scroller.querySelectorAll( '[data-rvn-compare-col]' );
+
+		if ( ! clip ) {
 			return;
 		}
 
-		// Переключение вкладок.
-		var tabsWrap = table.querySelector( '[data-rvn-compare-tabs]' );
-		var viewport = table.querySelector( '[data-rvn-compare-viewport]' );
+		// Ширина колонки = клиентская ширина клипа / N (фиксированно, R2-02).
+		var width = Math.floor( clip.clientWidth / n );
 
-		if ( tabsWrap ) {
-			tabsWrap.addEventListener( 'click', function ( e ) {
-				var btn = e.target && e.target.closest ? e.target.closest( '[data-rvn-compare-tab]' ) : null;
-				if ( ! btn ) {
-					return;
-				}
-
-				var tab = btn.getAttribute( 'data-rvn-compare-tab' );
-				var all = tabsWrap.querySelectorAll( '[data-rvn-compare-tab]' );
-				for ( var i = 0; i < all.length; i++ ) {
-					all[ i ].classList.toggle( 'is-active', all[ i ] === btn );
-				}
-
-				if ( ! viewport ) {
-					return;
-				}
-				viewport.classList.add( 'is-loading' );
-				fetchTabHTML( tab ).then( function ( data ) {
-					viewport.innerHTML = data.html || '';
-					viewport.classList.remove( 'is-loading' );
-					initTable( viewport );
-				} ).catch( function () {
-					viewport.classList.remove( 'is-loading' );
-				} );
-			} );
+		for ( var i = 0; i < colEls.length; i++ ) {
+			colEls[ i ].style.width = width + 'px';
+			colEls[ i ].style.minWidth = width + 'px';
+			colEls[ i ].style.flex = '0 0 ' + width + 'px';
 		}
 
-		// Переключатель «Только различия».
-		var diff = table.querySelector( '[data-rvn-compare-only-diff]' );
+		// Ячейки значений в рядах — той же ширины, что и колонки шапки.
+		var valueEls = scroller.querySelectorAll( '.rvn-compare-row__value' );
+		for ( var v = 0; v < valueEls.length; v++ ) {
+			valueEls[ v ].style.width = width + 'px';
+			valueEls[ v ].style.minWidth = width + 'px';
+			valueEls[ v ].style.flex = '0 0 ' + width + 'px';
+		}
+
+		// Подписи рядов — по ширине уголка шапки (сохраняем выравнивание).
+		var corner = scroller.querySelector( '.rvn-compare-corner' );
+		if ( corner ) {
+			var labelW = corner.getBoundingClientRect().width;
+			var labelEls = scroller.querySelectorAll( '.rvn-compare-row__label' );
+			for ( var l = 0; l < labelEls.length; l++ ) {
+				labelEls[ l ].style.width = labelW + 'px';
+				labelEls[ l ].style.minWidth = labelW + 'px';
+				labelEls[ l ].style.flex = '0 0 ' + labelW + 'px';
+			}
+		}
+
+		// Навешиваем ширину колонкам плавающей панели, если она есть.
+		var fpCols = document.querySelectorAll( '.rvn-compare-floating__col' );
+		for ( var f = 0; f < fpCols.length; f++ ) {
+			fpCols[ f ].style.width = width + 'px';
+			fpCols[ f ].style.minWidth = width + 'px';
+			fpCols[ f ].style.flex = '0 0 ' + width + 'px';
+		}
+	}
+
+	/**
+	 * Хранит состояние плавающей панели (создаётся лениво при первом скролле).
+	 */
+	var floating = null;
+
+	/**
+	 * Создаёт плавающую панель — компактный клон шапки таблицы.
+	 */
+	function initFloating( scroller ) {
+		var header = scroller.querySelector( '[data-rvn-compare-header]' );
+		var wrapper = document.createElement( 'div' );
+		wrapper.className = 'rvn-compare-floating';
+		wrapper.setAttribute( 'data-rvn-compare-floating', '1' );
+		wrapper.setAttribute( 'aria-hidden', 'true' );
+
+		var cols = header.querySelectorAll( '[data-rvn-compare-col]' );
+		var row = document.createElement( 'div' );
+		row.className = 'rvn-compare-floating__row';
+
+		for ( var i = 0; i < cols.length; i++ ) {
+			var clone = cols[ i ].cloneNode( true );
+			clone.classList.add( 'rvn-compare-floating__col' );
+			clone.removeAttribute( 'data-rvn-compare-col' );
+			row.appendChild( clone );
+		}
+
+		wrapper.appendChild( row );
+		document.body.appendChild( wrapper );
+
+		floating = {
+			el: wrapper,
+			row: row,
+			headerTop: 0,
+			active: false,
+			left: 0
+		};
+	}
+
+	/**
+	 * Обновляет состояние плавающей панели при скролле (throttle через rAF).
+	 */
+	function updateFloating( scroller ) {
+		if ( ! floating ) {
+			initFloating( scroller );
+		}
+
+		var header = scroller.querySelector( '[data-rvn-compare-header]' );
+		if ( ! header ) {
+			return;
+		}
+
+		var rect = header.getBoundingClientRect();
+		var offset = parseInt( CFG.floatingOffset, 10 ) || 0;
+		var show = rect.bottom < offset;
+
+		floating.active = show;
+		if ( show ) {
+			floating.el.style.top = offset + 'px';
+			floating.el.classList.add( 'is-visible' );
+			floating.el.style.transform = 'translateX(' + ( -currentIndex( scroller ) * colWidth( scroller ) ) + 'px)';
+		} else {
+			floating.el.classList.remove( 'is-visible' );
+		}
+	}
+
+	/**
+	 * Текущий индекс (позиция) слайдера.
+	 */
+	function currentIndex( scroller ) {
+		var clip = scroller.querySelector( '[data-rvn-compare-clip]' );
+		if ( ! clip ) {
+			return 0;
+		}
+		return Math.round( clip.scrollLeft / colWidth( scroller ) );
+	}
+
+	/**
+	 * Ширина одной колонки слайдера (эмпирически из DOM).
+	 */
+	function colWidth( scroller ) {
+		var col = scroller.querySelector( '[data-rvn-compare-col]' );
+		return col ? col.getBoundingClientRect().width : 0;
+	}
+
+	/**
+	 * Прокрутка слайдера на один шаг (вперёд/назад).
+	 */
+	function stepScroller( scroller, dir ) {
+		var clip = scroller.querySelector( '[data-rvn-compare-clip]' );
+		if ( ! clip ) {
+			return;
+		}
+
+		var w = colWidth( scroller );
+		var index = currentIndex( scroller );
+		var maxIndex = Math.max( 0, clip.scrollWidth - clip.clientWidth );
+
+		var target = dir === 'next' ? index + 1 : index - 1;
+		target = Math.max( 0, Math.min( target, Math.floor( maxIndex / w ) ) );
+		var px = target * w;
+
+		if ( CFG.animationMs && parseInt( CFG.animationMs, 10 ) > 0 ) {
+			clip.scrollTo( { left: px, behavior: 'smooth' } );
+		} else {
+			clip.scrollLeft = px;
+		}
+		updateArrows( scroller );
+	}
+
+	/**
+	 * Блокирует стрелки по краям прокрутки.
+	 */
+	function updateArrows( scroller ) {
+		var clip = scroller.querySelector( '[data-rvn-compare-clip]' );
+		if ( ! clip ) {
+			return;
+		}
+
+		var prev = scroller.querySelector( '[data-rvn-compare-arrow="prev"]' );
+		var next = scroller.querySelector( '[data-rvn-compare-arrow="next"]' );
+		var max = clip.scrollWidth - clip.clientWidth;
+
+		if ( prev ) {
+			prev.disabled = clip.scrollLeft <= 1;
+		}
+		if ( next ) {
+			next.disabled = clip.scrollLeft >= max - 1;
+		}
+	}
+
+	/**
+	 * Привязывает интерактив таблицы: вкладки, «Только различия», группы, слайдер.
+	 */
+	function initTableParts( root ) {
+		if ( ! root ) {
+			return;
+		}
+
+		// «Только различия».
+		var diff = root.querySelector( '[data-rvn-compare-only-diff]' );
 		if ( diff ) {
 			var applyDiff = function () {
-				var rows = table.querySelectorAll( '[data-rvn-compare-row]' );
+				var rows = root.querySelectorAll( '[data-rvn-compare-row]' );
 				for ( var r = 0; r < rows.length; r++ ) {
 					if ( diff.checked ) {
 						rows[ r ].style.display = rows[ r ].classList.contains( 'has-diff' ) ? '' : 'none';
@@ -322,16 +487,112 @@
 		}
 
 		// Сворачивание групп.
-		var groups = table.querySelectorAll( '[data-rvn-compare-group]' );
-		for ( var g = 0; g < groups.length; g++ ) {
-			( function ( group ) {
-				var head = group.querySelector( '[data-rvn-compare-group-toggle]' );
-				if ( head ) {
-					head.addEventListener( 'click', function () {
-						group.classList.toggle( 'is-collapsed' );
-					} );
+		arrayForEach( root.querySelectorAll( '[data-rvn-compare-group]' ), function ( group ) {
+			var head = group.querySelector( '[data-rvn-compare-group-toggle]' );
+			if ( head ) {
+				head.addEventListener( 'click', function () {
+					group.classList.toggle( 'is-collapsed' );
+				} );
+			}
+		} );
+
+		// Слайдер.
+		var scroller = root.querySelector( '[data-rvn-compare-scroller]' );
+		if ( scroller ) {
+			syncScroller( scroller );
+			updateArrows( scroller );
+
+			var prev = scroller.querySelector( '[data-rvn-compare-arrow="prev"]' );
+			var next = scroller.querySelector( '[data-rvn-compare-arrow="next"]' );
+			var clip = scroller.querySelector( '[data-rvn-compare-clip]' );
+
+			if ( prev ) {
+				prev.addEventListener( 'click', function () {
+					stepScroller( scroller, 'prev' );
+				} );
+			}
+			if ( next ) {
+				next.addEventListener( 'click', function () {
+					stepScroller( scroller, 'next' );
+				} );
+			}
+
+			if ( clip ) {
+				clip.addEventListener( 'scroll', function () {
+					updateArrows( scroller );
+					if ( floating && floating.active ) {
+						floating.el.style.transform = 'translateX(' + ( -clip.scrollLeft ) + 'px)';
+					}
+				}, { passive: true } );
+			}
+
+			if ( 'ResizeObserver' in window ) {
+				var ro = new ResizeObserver( function () {
+					syncScroller( scroller );
+					updateArrows( scroller );
+				} );
+				ro.observe( clip );
+			} else {
+				window.addEventListener( 'resize', function () {
+					syncScroller( scroller );
+					updateArrows( scroller );
+				} );
+			}
+
+			// Плавающая панель — скролл страницы.
+			window.addEventListener( 'scroll', function () {
+				if ( scroller && scroller.offsetParent !== null ) {
+					updateFloating( scroller );
 				}
-			} )( groups[ g ] );
+			}, { passive: true } );
+		}
+	}
+
+	function initTable( scope ) {
+		var table = scope && scope.querySelector ? scope.querySelector( '.rvn-compare-table' ) : null;
+		if ( ! table ) {
+			return;
+		}
+
+		var tabsWrap = table.querySelector( '[data-rvn-compare-tabs]' );
+		var viewport = table.querySelector( '[data-rvn-compare-viewport]' );
+
+		if ( tabsWrap ) {
+			tabsWrap.addEventListener( 'click', function ( e ) {
+				var btn = e.target && e.target.closest ? e.target.closest( '[data-rvn-compare-tab]' ) : null;
+				if ( ! btn ) {
+					return;
+				}
+
+				var tab = btn.getAttribute( 'data-rvn-compare-tab' );
+				var allBtns = tabsWrap.querySelectorAll( '[data-rvn-compare-tab]' );
+				for ( var i = 0; i < allBtns.length; i++ ) {
+					allBtns[ i ].classList.toggle( 'is-active', allBtns[ i ] === btn );
+				}
+
+				if ( ! viewport ) {
+					return;
+				}
+				viewport.classList.add( 'is-loading' );
+				fetchTabHTML( tab ).then( function ( data ) {
+					viewport.innerHTML = data.html || '';
+					viewport.classList.remove( 'is-loading' );
+					initTableParts( viewport );
+				} ).catch( function () {
+					viewport.classList.remove( 'is-loading' );
+				} );
+			} );
+		}
+
+		initTableParts( table );
+	}
+
+	/**
+	 * Мини-хелпер forEach для NodeList.
+	 */
+	function arrayForEach( list, cb ) {
+		for ( var i = 0; i < list.length; i++ ) {
+			cb( list[ i ], i );
 		}
 	}
 
@@ -356,7 +617,7 @@
 			if ( ! viewport ) { return; }
 			viewport.innerHTML = data.html || '';
 			viewport.classList.remove( 'is-loading' );
-			initTable( viewport );
+			initTableParts( viewport );
 		} ).catch( function () {
 			if ( viewport ) {
 				viewport.classList.remove( 'is-loading' );

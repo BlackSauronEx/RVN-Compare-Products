@@ -230,8 +230,9 @@
 }
 
 .rvn-compare-table__viewport {
-	overflow-x: auto;
+	overflow: hidden;
 	position: relative;
+	padding: 8px;
 }
 
 .rvn-compare-table__viewport.is-loading {
@@ -239,24 +240,80 @@
 	pointer-events: none;
 }
 
+/* Слайдер */
+.rvn-compare-scroller {
+	position: relative;
+}
+
+.rvn-compare-arrow {
+	position: absolute;
+	top: 120px; /* по центру первой строки — фото */
+	z-index: 5;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	border: 1px solid var(--rvn-compare-border);
+	background: #fff;
+	color: var(--rvn-compare-text);
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+.rvn-compare-arrow:hover:not(:disabled) {
+	color: var(--rvn-compare-accent);
+	border-color: var(--rvn-compare-accent);
+}
+
+.rvn-compare-arrow:disabled {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.rvn-compare-arrow--prev { left: 0; }
+.rvn-compare-arrow--next { right: 0; }
+
+.rvn-compare-clip {
+	overflow-x: auto;
+	overflow-y: hidden;
+	scroll-behavior: smooth;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+}
+
+.rvn-compare-track {
+	display: inline-flex;
+	flex-direction: column;
+	min-width: 100%;
+}
+
+/* Шапка: колонки + уголок */
 .rvn-compare-columns {
 	display: flex;
-	gap: 12px;
-	padding: 16px;
 	align-items: stretch;
 }
 
+.rvn-compare-corner {
+	flex: 0 0 140px;
+	position: sticky;
+	left: 0;
+	z-index: 3;
+	background: var(--rvn-compare-surface);
+	border-right: 1px solid var(--rvn-compare-border);
+}
+
 .rvn-compare-col {
-	flex: 1 1 0;
+	flex: 0 0 auto;
 	min-width: 0;
 	position: relative;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
 	background: #fff;
-	border: 1px solid var(--rvn-compare-border);
-	border-radius: var(--rvn-compare-radius);
+	border-right: 1px solid var(--rvn-compare-border);
 	padding: 12px;
+	box-sizing: border-box;
 }
 
 .rvn-compare-col__remove {
@@ -279,12 +336,15 @@
 .rvn-compare-col__thumb {
 	display: block;
 	text-align: center;
+	height: 120px;
+	overflow: hidden;
 }
 
 .rvn-compare-col__thumb img {
 	max-width: 100%;
-	height: auto;
+	max-height: 100%;
 	border-radius: 8px;
+	object-fit: contain;
 }
 
 .rvn-compare-col__title {
@@ -333,7 +393,8 @@
 
 /* Ряды характеристик */
 .rvn-compare-rows {
-	padding: 0 16px 16px;
+	display: flex;
+	flex-direction: column;
 }
 
 .rvn-compare-group__head {
@@ -350,7 +411,8 @@
 	cursor: pointer;
 	font-size: 14px;
 	font-weight: 600;
-	margin: 12px 0 4px;
+	margin: 12px 8px 4px;
+	box-sizing: border-box;
 }
 
 .rvn-compare-group__arrow {
@@ -368,41 +430,88 @@
 
 .rvn-compare-row {
 	display: flex;
-	gap: 12px;
+	align-items: stretch;
 	border-bottom: 1px solid var(--rvn-compare-border);
 }
 
 .rvn-compare-row__label {
-	flex: 0 0 160px;
-	padding: 8px 0;
+	flex: 0 0 140px;
+	position: sticky;
+	left: 0;
+	z-index: 2;
+	background: var(--rvn-compare-surface);
+	border-right: 1px solid var(--rvn-compare-border);
+	padding: 8px 12px;
 	font-size: 13px;
 	font-weight: 600;
 	color: #000;
+	box-sizing: border-box;
 }
 
 .rvn-compare-row__values {
 	flex: 1 1 auto;
 	display: flex;
-	gap: 12px;
 }
 
 .rvn-compare-row__value {
-	flex: 1 1 0;
+	flex: 0 0 auto;
 	min-width: 0;
-	padding: 8px 0;
+	padding: 8px 12px;
 	font-size: 13px;
 	overflow-wrap: anywhere;
+	box-sizing: border-box;
 }
 
-.rvn-compare-row.has-diff .rvn-compare-row__values {
+.rvn-compare-row.has-diff .rvn-compare-row__value {
 	background: var(--rvn-compare-diff);
-	border-radius: 6px;
+}
+
+/* Плавающая панель */
+.rvn-compare-floating {
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+	z-index: 99999;
+	background: #fff;
+	border-bottom: 1px solid var(--rvn-compare-border);
+	box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+	display: none;
+}
+
+.rvn-compare-floating.is-visible {
+	display: block;
+}
+
+.rvn-compare-floating__row {
+	display: flex;
+	overflow: hidden;
+}
+
+.rvn-compare-floating__col {
+	flex: 0 0 auto;
+	padding: 8px 12px;
+	border-right: 1px solid var(--rvn-compare-border);
+	box-sizing: border-box;
+}
+
+.rvn-compare-floating__col .rvn-compare-col__buy {
+	display: none;
+}
+
+.rvn-compare-floating__col .rvn-compare-col__stock {
+	display: none;
 }
 
 /* Мобильные */
 @media (max-width: 768px) {
+	.rvn-compare-arrow {
+		top: 80px;
+	}
+
+	.rvn-compare-corner,
 	.rvn-compare-row__label {
-		flex: 0 0 120px;
+		flex-basis: 100px;
 	}
 
 	.rvn-compare-toolbar {

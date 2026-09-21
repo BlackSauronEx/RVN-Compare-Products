@@ -239,37 +239,51 @@ final class RVN_Compare_Admin {
 		$this->render_page_section( $all );
 		$this->render_exclusions_section();
 
+		// ---- Поведение и ограничения ----
 		echo '<h2 class="title">' . esc_html__( 'Поведение и ограничения', 'rvn-compare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation"><tbody>';
-
 		$this->number_field( $all, 'max_items_total', __( 'Максимум товаров в сравнении', 'rvn-compare' ), 1, 100, __( 'Общий лимит списка сравнения (по умолчанию 50).', 'rvn-compare' ) );
 		$this->number_field( $all, 'max_items_per_context', __( 'Лимит на категорию/группу', 'rvn-compare' ), 1, 50, __( 'Максимум товаров в одной категории или группе (по умолчанию 12). Не может превышать глобальный лимит.', 'rvn-compare' ) );
-		$this->number_field( $all, 'breakpoint_tablet', __( 'Точка перехода (планшет), px', 'rvn-compare' ), 0, 10000, __( 'Ширина, с которой включается планшетный режим (по умолчанию 1024).', 'rvn-compare' ) );
-		$this->number_field( $all, 'breakpoint_mobile', __( 'Точка перехода (телефон), px', 'rvn-compare' ), 0, 10000, __( 'Ширина, с которой включается мобильный режим (по умолчанию 768).', 'rvn-compare' ) );
+		$this->number_field( $all, 'breakpoint_tablet', __( 'Точка перехода (планшет), px', 'rvn-compare' ), 0, 10000, __( 'Ширина включения планшетного режима (по умолчанию 1024).', 'rvn-compare' ) );
+		$this->number_field( $all, 'breakpoint_mobile', __( 'Точка перехода (телефон), px', 'rvn-compare' ), 0, 10000, __( 'Ширина включения мобильного режима (по умолчанию 768).', 'rvn-compare' ) );
 		$this->number_field( $all, 'columns_desktop', __( 'Видимых товаров: десктоп', 'rvn-compare' ), 1, 10, __( 'Колонок на десктопе (по умолчанию 5).', 'rvn-compare' ) );
 		$this->number_field( $all, 'columns_tablet', __( 'Видимых товаров: планшет', 'rvn-compare' ), 1, 10, __( 'Колонок на планшете (по умолчанию 3).', 'rvn-compare' ) );
 		$this->number_field( $all, 'columns_mobile', __( 'Видимых товаров: телефон', 'rvn-compare' ), 1, 10, __( 'Колонок на телефоне (по умолчанию 2).', 'rvn-compare' ) );
+		$this->color_field( $all, 'accent_color', __( 'Основной цветовой акцент', 'rvn-compare' ), __( 'Цвет кнопок «Купить», активных вкладок, бейджа счётчика и [?] (по умолчанию #2563eb).', 'rvn-compare' ) );
+		$this->text_field( $all, 'floating_offset', __( 'Отступ плавающей панели', 'rvn-compare' ), __( 'Верхний отступ фиксированной панели при прокрутке (по умолчанию 0px; можно в своих единицах, напр. 80px).', 'rvn-compare' ) );
+		echo '</tbody></table>';
+
+		// ---- Фото и анимации ----
+		echo '<h2 class="title">' . esc_html__( 'Фото и анимации', 'rvn-compare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$this->select_field( $all, 'photo_fit', __( 'Подгонка фото (object-fit)', 'rvn-compare' ), array(
+			'contain' => __( 'Вписать целиком (contain)', 'rvn-compare' ),
+			'cover'   => __( 'Заполнить (cover)', 'rvn-compare' ),
+		), __( 'Как фото помещается в рамку шапки товара (R2-14).', 'rvn-compare' ) );
 		$this->number_field( $all, 'animation_speed', __( 'Скорость анимации, мс', 'rvn-compare' ), 0, 10000, __( '0 — без анимации (по умолчанию 300).', 'rvn-compare' ) );
 		$this->number_field( $all, 'toast_duration', __( 'Длительность уведомлений, мс', 'rvn-compare' ), 0, 60000, __( 'Через сколько скрывать всплывающие уведомления (по умолчанию 3200).', 'rvn-compare' ) );
+		echo '</tbody></table>';
 
-		$this->color_field( $all, 'accent_color', __( 'Основной цветовой акцент', 'rvn-compare' ), __( 'Цвет кнопок «Купить», активных вкладок, бейджа счётчика и [?] (по умолчанию #2563eb).', 'rvn-compare' ) );
-
+		// ---- Кнопка сравнения ----
+		echo '<h2 class="title">' . esc_html__( 'Кнопка сравнения', 'rvn-compare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation"><tbody>';
 		$this->select_field( $all, 'archive_button_position', __( 'Позиция кнопки на карточке товара', 'rvn-compare' ), $this->button_positions(), __( 'Дефолт — «После кнопки Купить».', 'rvn-compare' ) );
 		$this->select_field( $all, 'single_button_position', __( 'Позиция кнопки на странице товара', 'rvn-compare' ), $this->button_positions(), __( 'Дефолт — «После кнопки Купить».', 'rvn-compare' ) );
+		echo '</tbody></table>';
 
+		// ---- Доступ и прочее ----
+		echo '<h2 class="title">' . esc_html__( 'Доступ и прочее', 'rvn-compare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation"><tbody>';
 		$this->select_field( $all, 'admin_capability', __( 'Доступ к настройкам', 'rvn-compare' ), array(
 			'manage_options'     => __( 'Только администраторы', 'rvn-compare' ),
 			'manage_woocommerce' => __( 'Администраторы и менеджеры магазина', 'rvn-compare' ),
 		), __( 'Кому разрешено менять настройки плагина.', 'rvn-compare' ) );
-
 		$this->select_field( $all, 'groups_default_state', __( 'Группы характеристик по умолчанию', 'rvn-compare' ), array(
 			'expanded'  => __( 'Развёрнуты', 'rvn-compare' ),
 			'collapsed' => __( 'Свёрнуты', 'rvn-compare' ),
 		), __( 'Стартовое состояние групп в таблице.', 'rvn-compare' ) );
-
 		$this->checkbox_field( $all, 'auto_insert_table', __( 'Авто-вставка таблицы', 'rvn-compare' ), __( 'Добавлять таблицу в конец страницы сравнения, если на ней нет шорткода.', 'rvn-compare' ) );
 		$this->checkbox_field( $all, 'show_stock', __( 'Показывать остаток', 'rvn-compare' ), __( 'Показывать «В наличии (54)» в шапке товара.', 'rvn-compare' ) );
-
 		echo '</tbody></table>';
 	}
 
