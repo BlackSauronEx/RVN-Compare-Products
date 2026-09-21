@@ -16,6 +16,19 @@
 	border-top: 1px solid #dcdcde;
 }
 
+.rvn-compare-inline-form {
+	display: inline-block;
+	margin-right: 12px;
+}
+
+.rvn-compare-inline-form .button {
+	vertical-align: top;
+}
+
+.rvn-compare-page-actions {
+	margin: 0 0 8px;
+}
+
 .rvn-compare-color {
 	width: 90px;
 }

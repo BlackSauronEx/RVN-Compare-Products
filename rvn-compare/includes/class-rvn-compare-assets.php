@@ -112,8 +112,9 @@ final class RVN_Compare_Assets {
 			'rvn-compare-admin',
 			'rvnCompareAdmin',
 			array(
-				'confirmResetTab' => __( 'Сбросить все значения на этой вкладке?', 'rvn-compare' ),
-				'confirmResetAll' => __( 'Сбросить все настройки плагина к значениям по умолчанию?', 'rvn-compare' ),
+				'confirmResetTab'  => __( 'Сбросить все значения на этой вкладке?', 'rvn-compare' ),
+				'confirmResetAll'  => __( 'Сбросить все настройки плагина к значениям по умолчанию?', 'rvn-compare' ),
+				'confirmResetPage' => __( 'Заменить содержимое страницы сравнения только шорткодом таблицы? Существующее содержимое будет удалено.', 'rvn-compare' ),
 			)
 		);
 	}

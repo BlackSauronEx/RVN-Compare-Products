@@ -115,6 +115,13 @@ final class RVN_Compare_Registry {
 	}
 }
 
+/*
+ * Хук активации: создаёт дефолтные настройки и страницу сравнения.
+ * Класс активатора подключает нужные файлы сам — не полагаемся на
+ * автозагрузчик, т.к. активация может выполняться до plugins_loaded.
+ */
+register_activation_hook( __FILE__, array( 'RVN_Compare_Activator', 'activate' ) );
+
 add_action(
 	'plugins_loaded',
 	array( 'RVN_Compare_Registry', 'boot' ),

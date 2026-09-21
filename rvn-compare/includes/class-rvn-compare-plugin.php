@@ -55,6 +55,7 @@ final class RVN_Compare_Plugin {
 		 */
 		$components = array(
 			'RVN_Compare_Settings',
+			'RVN_Compare_Page_Manager',
 			'RVN_Compare_Storage',
 			'RVN_Compare_Rest',
 			'RVN_Compare_Assets',

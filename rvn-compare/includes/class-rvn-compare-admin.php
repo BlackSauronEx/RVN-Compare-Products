@@ -143,6 +143,11 @@ final class RVN_Compare_Admin {
 
 		echo '<div class="wrap rvn-compare-admin">';
 		echo '<h1>' . esc_html__( 'RVN Compare — настройки', 'rvn-compare' ) . '</h1>';
+
+		// Всплывающие уведомления после сохранения/действий над страницей.
+		if ( isset( $_GET['notice'] ) ) {
+			$this->render_notice( sanitize_key( (string) $_GET['notice'] ) );
+		}
 		echo '<nav class="nav-tab-wrapper">';
 		foreach ( $this->admin_tabs() as $slug => $label ) {
 			$url   = add_query_arg(
@@ -231,6 +236,9 @@ final class RVN_Compare_Admin {
 	 * @return void
 	 */
 	private function render_general_tab( $all ) {
+		$this->render_page_section( $all );
+
+		echo '<h2 class="title">' . esc_html__( 'Поведение и ограничения', 'rvn-compare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation"><tbody>';
 
 		$this->number_field( $all, 'max_items_total', __( 'Максимум товаров в сравнении', 'rvn-compare' ), 1, 100, __( 'Общий лимит списка сравнения (по умолчанию 50).', 'rvn-compare' ) );
@@ -357,18 +365,34 @@ final class RVN_Compare_Admin {
 		check_admin_referer( 'rvn_compare_save', 'rvn_compare_nonce' );
 
 		$settings = RVN_Compare_Settings::instance();
+		$tab      = isset( $_POST['tab'] ) ? sanitize_key( wp_unslash( $_POST['tab'] ) ) : 'general';
 
-		if ( isset( $_POST['rvn_compare_reset'] ) && $_POST['rvn_compare_reset'] ) {
+		/*
+		 * Действия над страницей сравнения (отдельные формы на вкладке
+		 * «Основное») — обрабатываем до сохранения настроек.
+		 */
+		if ( 'general' === $tab && isset( $_POST['rvn_compare_action'] ) ) {
+			$action = sanitize_key( (string) $_POST['rvn_compare_action'] );
+
+			if ( 'create_page' === $action ) {
+				$this->create_compare_page();
+				$msg = 'page_created';
+			} elseif ( 'reset_page' === $action ) {
+				$this->reset_compare_page();
+				$msg = 'page_reset';
+			} else {
+				$msg = 'saved';
+			}
+		} elseif ( isset( $_POST['rvn_compare_reset'] ) && $_POST['rvn_compare_reset'] ) {
 			// Полный сброс: пишем чистые дефолты.
 			$settings->replace( $settings->defaults() );
 			$msg = 'reset';
 		} else {
-			// $_POST передаём как есть — wp_unslash выполняется внутри для текстовых полей.
-			$settings->save_from_request( $_POST );
+			// $_POST передаём как есть — wp_unslash выполняется внутри.
+			$settings->save_from_request( wp_unslash( $_POST ) );
 			$msg = 'saved';
 		}
 
-		$tab = isset( $_POST['tab'] ) ? sanitize_key( wp_unslash( $_POST['tab'] ) ) : 'general';
 		wp_safe_redirect(
 			add_query_arg(
 				array(
@@ -380,6 +404,134 @@ final class RVN_Compare_Admin {
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * Создаёт страницу сравнения и назначает её в настройках.
+	 *
+	 * @return void
+	 */
+	private function create_compare_page() {
+		$manager = RVN_Compare_Page_Manager::instance();
+
+		if ( $manager->find_by_slug( RVN_Compare_Page_Manager::SLUG ) ) {
+			// Страница уже есть (в т.ч. в корзине) — восстанавливаем/назначаем.
+			$manager->ensure_page();
+			return;
+		}
+
+		$manager->create_page();
+	}
+
+	/**
+	 * Сбрасывает содержимое страницы сравнения (только шорткод).
+	 *
+	 * @return void
+	 */
+	private function reset_compare_page() {
+		$manager = RVN_Compare_Page_Manager::instance();
+		$manager->reset_page_content();
+	}
+
+	/**
+	 * Рендерит секцию «Страница сравнения» на вкладке «Основное».
+	 *
+	 * @param array $all Текущие настройки.
+	 * @return void
+	 */
+	private function render_page_section( $all ) {
+		$manager = RVN_Compare_Page_Manager::instance();
+		$page_id = (int) ( isset( $all['compare_page_id'] ) ? $all['compare_page_id'] : 0 );
+		$exists  = $page_id && get_post( $page_id );
+
+		echo '<h2 class="title">' . esc_html__( 'Страница сравнения', 'rvn-compare' ) . '</h2>';
+
+		$pages = get_pages( array( 'post_status' => 'publish,private,draft', 'sort_column' => 'post_title' ) );
+
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		// Выбор текущей страницы сравнения.
+		echo '<tr><th scope="row"><label for="compare_page_id">' . esc_html__( 'Страница сравнения', 'rvn-compare' ) . '</label></th><td>';
+		echo '<select id="compare_page_id" name="compare_page_id">';
+		echo '<option value="0">' . esc_html__( '— Не выбрана (использовать шорткод вручную) —', 'rvn-compare' ) . '</option>';
+		foreach ( $pages as $page ) {
+			printf(
+				'<option value="%1$d" %2$s>%3$s</option>',
+				(int) $page->ID,
+				selected( $page_id, (int) $page->ID, false ),
+				esc_html( get_the_title( $page ) )
+			);
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'Страница, на которую ведёт кнопка-счётчик и где живёт таблица сравнения.', 'rvn-compare' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '</tbody></table>';
+
+		// Кнопки создания и сброса — отдельными формами (их действия зовут свои обработчики).
+		echo '<p class="rvn-compare-page-actions">';
+		if ( $exists ) {
+			echo '<strong>' . esc_html__( 'Текущая страница:', 'rvn-compare' ) . '</strong> ';
+			echo esc_html( get_the_title( $page_id ) );
+			echo ' (<code>' . esc_html( get_post_field( 'post_name', $page_id ) ) . '</code>)';
+			echo '</p>';
+
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rvn-compare-inline-form">';
+			wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+			echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+			echo '<input type="hidden" name="tab" value="general" />';
+			echo '<input type="hidden" name="rvn_compare_action" value="reset_page" />';
+			submit_button(
+				__( 'Сбросить страницу (останется только шорткод)', 'rvn-compare' ),
+				'secondary',
+				'submit',
+				true,
+				array( 'onclick' => 'return confirm(rvnCompareAdmin.confirmResetPage);' )
+			);
+			echo '</form>';
+		} else {
+			echo '</p>';
+
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rvn-compare-inline-form">';
+			wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+			echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+			echo '<input type="hidden" name="tab" value="general" />';
+			echo '<input type="hidden" name="rvn_compare_action" value="create_page" />';
+			submit_button( __( 'Создать страницу', 'rvn-compare' ), 'primary', 'submit', true );
+			echo '</form>';
+		}
+
+		if ( $exists ) {
+			$view_url = get_permalink( $page_id );
+			echo '<p>';
+			echo '<a href="' . esc_url( $view_url ) . '" target="_blank">' . esc_html__( 'Посмотреть страницу', 'rvn-compare' ) . '</a>';
+			echo '</p>';
+		}
+	}
+
+	/**
+	 * Выводит уведомление после сохранения/действия.
+	 *
+	 * @param string $type Тип уведомления (saved/reset/page_created/page_reset).
+	 * @return void
+	 */
+	private function render_notice( $type ) {
+		$messages = array(
+			'saved'        => array( 'notice-success', __( 'Настройки сохранены.', 'rvn-compare' ) ),
+			'reset'        => array( 'notice-success', __( 'Настройки сброшены к значениям по умолчанию.', 'rvn-compare' ) ),
+			'page_created' => array( 'notice-success', __( 'Страница сравнения создана и назначена.', 'rvn-compare' ) ),
+			'page_reset'   => array( 'notice-success', __( 'Содержимое страницы сравнения сброшено (остался только шорткод).', 'rvn-compare' ) ),
+		);
+
+		if ( ! isset( $messages[ $type ] ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice %1$s is-dismissible"><p>%2$s</p></div>',
+			esc_attr( $messages[ $type ][0] ),
+			esc_html( $messages[ $type ][1] )
+		);
 	}
 
 	// ---- Хелперы полей формы (общие для всех вкладок). ----
