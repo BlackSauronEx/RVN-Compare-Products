@@ -100,7 +100,7 @@ final class RVN_Compare_Settings {
 			'fields'                           => array(),
 			'category_groups'                  => array(),
 			'acf_meta_fields'                  => array(),
-			'design'                           => array(),
+			'design'                           => $this->design_defaults(),
 			'button_styles'                    => array(),
 			'toast_styles'                     => array(),
 			'uninstall'                        => array(
@@ -297,6 +297,11 @@ final class RVN_Compare_Settings {
 				$sanitized[ $key ] = isset( $raw[ $key ] ) ? absint( $raw[ $key ] ) : absint( $current[ $key ] );
 				continue;
 			}
+
+			// Ячейки вкладки «Дизайн таблицы»: ключ [секция][поле] или [css_var].
+			if ( null !== $this->sanitize_design( $key, $raw, $current, $sanitized ) ) {
+				continue;
+			}
 		}
 
 		/*
@@ -358,11 +363,238 @@ final class RVN_Compare_Settings {
 				'toast_cleared_text',
 				'toast_limit_text',
 			),
-			'design'   => array(),
+			'design'   => $this->design_keys(),
 			'help'     => array(),
 		);
 	}
 
+
+	/*
+	 * ---- Дизайн таблицы (§6.3 живого ТЗ) ----
+	 * Хранится в settings['design'] вложенной структурой [секция][поле];
+	 * значения публикуются на фронт как CSS-переменные --rvn-compare-*.
+	 */
+
+	/**
+	 * Дефолты дизайна таблицы (из §11 живого ТЗ).
+	 *
+	 * @return array
+	 */
+	private function design_defaults() {
+		return array(
+			'colors'   => array(
+				'table_bg'      => '#ffffff',
+				'header_bg'     => '#ffffff',
+				'label_bg'      => '#f3f4f6',
+				'group_bg'      => '#f3f4f6',
+				'group_soft_bg' => '#f3f4f6',
+				'text'          => '#1f2937',
+				'value_text'    => '#1f2937',
+				'label_text'    => '#000000',
+				'accent'        => '#2563eb',
+				'diff_bg'       => '#ffcfcc',
+				'arrow_bg'      => '#ffffff',
+				'floating_bg'   => '#ffffff',
+				'border'        => '#e2e8f0',
+			),
+			'types'    => array(
+				'value_size'   => 14,
+				'label_size'   => 13,
+				'group_size'   => 14,
+				'label_weight' => 600,
+				'value_weight' => 400,
+			),
+			'geometry' => array(
+				'radius'       => 12,
+				'cell_padding' => 8,
+				'photo_height' => 120,
+				'photo_fit'    => 'contain',
+			),
+			'behavior' => array(
+				'soft_bg_enabled' => '1',
+				'buy_header'      => 'buy',
+				'buy_bottom'      => 'buy',
+				'buy_floating'    => 'buy',
+			),
+		);
+	}
+
+	/**
+	 * Плоский список POST-ключей вкладки «Дизайн таблицы».
+	 *
+	 * Формат: design[секция][поле] — по нему же поднимаются значения из $_POST
+	 * и проверяются в sanitize_design(). Вложенные массивы не используют,
+	 * чтобы вписаться в общий таб-цикл save_from_request().
+	 *
+	 * @return string[]
+	 */
+	private function design_keys() {
+		return array(
+			'design[colors][table_bg]',
+			'design[colors][header_bg]',
+			'design[colors][label_bg]',
+			'design[colors][group_bg]',
+			'design[colors][group_soft_bg]',
+			'design[colors][text]',
+			'design[colors][value_text]',
+			'design[colors][label_text]',
+			'design[colors][accent]',
+			'design[colors][diff_bg]',
+			'design[colors][arrow_bg]',
+			'design[colors][floating_bg]',
+			'design[colors][border]',
+			'design[types][value_size]',
+			'design[types][label_size]',
+			'design[types][group_size]',
+			'design[types][label_weight]',
+			'design[types][value_weight]',
+			'design[geometry][radius]',
+			'design[geometry][cell_padding]',
+			'design[geometry][photo_height]',
+			'design[geometry][photo_fit]',
+			'design[behavior][soft_bg_enabled]',
+			'design[behavior][buy_header]',
+			'design[behavior][buy_bottom]',
+			'design[behavior][buy_floating]',
+		);
+	}
+
+	/**
+	 * Читает текущее значение дизайна (с фолбэком на дефолт).
+	 *
+	 * @param array  $design  Массив settings['design'].
+	 * @param string $section Секция.
+	 * @param string $field   Поле.
+	 * @return mixed
+	 */
+	private function design_get( $design, $section, $field ) {
+		if ( isset( $design[ $section ][ $field ] ) ) {
+			return $design[ $section ][ $field ];
+		}
+		$def = $this->design_defaults();
+		return isset( $def[ $section ][ $field ] ) ? $def[ $section ][ $field ] : '';
+	}
+
+	/**
+	 * Санитизирует одно поле дизайна (вызывается из save_from_request()).
+	 *
+	 * @param string $key        Плоский ключ дизайна (или любой другой ключ — вернём null).
+	 * @param array  $raw        Сырые данные формы.
+	 * @param array  $current    Текущие настройки.
+	 * @param array  $sanitized  Санитизированный массив (по ссылке).
+	 * @return bool|null true — обработано; null — не дизайн-ключ.
+	 */
+	private function sanitize_design( $key, $raw, $current, &$sanitized ) {
+		if ( 0 !== strpos( (string) $key, 'design[' ) ) {
+			return null;
+		}
+		if ( ! preg_match( '/^design\[([a-z_]+)\]\[([a-z_]+)\]$/', (string) $key, $m ) ) {
+			return null;
+		}
+		$section = $m[1];
+		$field   = $m[2];
+		$value   = isset( $raw['design'][ $section ][ $field ] ) ? $raw['design'][ $section ][ $field ] : null;
+		$cur     = $this->design_get( $current['design'], $section, $field );
+
+		if ( 'colors' === $section ) {
+			$hex = ( null !== $value ) ? sanitize_hex_color( $value ) : '';
+			$sanitized['design'][ $section ][ $field ] = $hex ? $hex : $cur;
+			return true;
+		}
+
+		if ( 'types' === $section ) {
+			$sanitized['design'][ $section ][ $field ] = ( null !== $value && '' !== (string) $value ) ? absint( $value ) : $cur;
+			return true;
+		}
+
+		if ( 'geometry' === $section ) {
+			if ( 'photo_fit' === $field ) {
+				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
+				$sanitized['design'][ $section ][ $field ] = in_array( $v, array( 'contain', 'cover' ), true ) ? $v : $cur;
+			} else {
+				$sanitized['design'][ $section ][ $field ] = ( null !== $value && '' !== (string) $value ) ? absint( $value ) : $cur;
+			}
+			return true;
+		}
+
+		if ( 'behavior' === $section ) {
+			if ( 'soft_bg_enabled' === $field ) {
+				// Снятый чекбокс в POST не приходит — явно пишем '0'.
+				$sanitized['design'][ $section ][ $field ] = ( isset( $raw['design']['behavior'][ $field ] ) && $raw['design']['behavior'][ $field ] ) ? '1' : '0';
+			} else {
+				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
+				$sanitized['design'][ $section ][ $field ] = in_array( $v, array( 'buy', 'shortcode', 'hidden' ), true ) ? $v : $cur;
+			}
+			return true;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Собирает плоский список CSS-переменных из настроек дизайна.
+	 *
+	 * @return array{name:string, value:string}[]
+	 */
+	public function design_css_vars() {
+		$design = (array) $this->get( 'design', array() );
+		$def    = $this->design_defaults(); // страховка при неполном массиве.
+		$d      = wp_parse_args( $design, $def );
+
+		$map = array(
+			'--rvn-compare-table-bg'     => $this->design_get( $d, 'colors', 'table_bg' ),
+			'--rvn-compare-header-bg'    => $this->design_get( $d, 'colors', 'header_bg' ),
+			'--rvn-compare-label-bg'     => $this->design_get( $d, 'colors', 'label_bg' ),
+			'--rvn-compare-group-bg'     => $this->design_get( $d, 'colors', 'group_bg' ),
+			'--rvn-compare-group-soft'   => $this->design_get( $d, 'colors', 'group_soft_bg' ),
+			'--rvn-compare-text'         => $this->design_get( $d, 'colors', 'text' ),
+			'--rvn-compare-value-text'   => $this->design_get( $d, 'colors', 'value_text' ),
+			'--rvn-compare-label-text'   => $this->design_get( $d, 'colors', 'label_text' ),
+			'--rvn-compare-accent'       => $this->design_get( $d, 'colors', 'accent' ),
+			'--rvn-compare-diff'         => $this->design_get( $d, 'colors', 'diff_bg' ),
+			'--rvn-compare-arrow-bg'     => $this->design_get( $d, 'colors', 'arrow_bg' ),
+			'--rvn-compare-floating-bg'  => $this->design_get( $d, 'colors', 'floating_bg' ),
+			'--rvn-compare-border'       => $this->design_get( $d, 'colors', 'border' ),
+			'--rvn-compare-font-size'    => absint( $this->design_get( $d, 'types', 'value_size' ) ) . 'px',
+			'--rvn-compare-label-size'   => absint( $this->design_get( $d, 'types', 'label_size' ) ) . 'px',
+			'--rvn-compare-group-size'   => absint( $this->design_get( $d, 'types', 'group_size' ) ) . 'px',
+			'--rvn-compare-value-weight' => absint( $this->design_get( $d, 'types', 'value_weight' ) ),
+			'--rvn-compare-label-weight' => absint( $this->design_get( $d, 'types', 'label_weight' ) ),
+			'--rvn-compare-radius'       => absint( $this->design_get( $d, 'geometry', 'radius' ) ) . 'px',
+			'--rvn-compare-cell-padding' => absint( $this->design_get( $d, 'geometry', 'cell_padding' ) ) . 'px',
+			'--rvn-compare-photo-height' => absint( $this->design_get( $d, 'geometry', 'photo_height' ) ) . 'px',
+		);
+
+		return $map;
+	}
+
+	/**
+	 * Генерирует инлайн-CSS настроек дизайна таблицы.
+	 *
+	 * Переменные выводятся область таблицы и плавающей панели — кнопки и
+	 * прочие «корневые» стили при этом не задеваются (до RD-02).
+	 *
+	 * @return string
+	 */
+	public function design_css() {
+		$vars = $this->design_css_vars();
+		$decl = array();
+		foreach ( $vars as $name => $value ) {
+			$decl[] = $name . ':' . $value . ';';
+		}
+
+		$design = (array) $this->get( 'design', array() );
+		$fit    = $this->design_get( $design, 'geometry', 'photo_fit' );
+
+		$soft = '';
+		if ( '1' === (string) $this->design_get( $design, 'behavior', 'soft_bg_enabled' ) ) {
+			$soft = '.rvn-compare-table .rvn-compare-group__head{border-bottom:3px solid var(--rvn-compare-group-soft);}';
+		}
+
+		return '.rvn-compare-table,.rvn-compare-floating{' . implode( '', $decl ) . '}'
+			. '.rvn-compare-table .rvn-compare-col__thumb img{object-fit:' . esc_attr( $fit ) . ';}'
+			. $soft;
+	}
 
 	/*
 	 * ---- Поля таблицы, группы характеристик, группы категорий (UI админки). ----

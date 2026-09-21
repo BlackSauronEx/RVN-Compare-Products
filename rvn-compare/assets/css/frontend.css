@@ -16,7 +16,24 @@
 	--rvn-compare-radius-btn: 10px;
 	--rvn-compare-font-size: 14px;
 	--rvn-compare-weight: 500;
+	--rvn-compare-value-weight: 400;
 	--rvn-compare-padding: 8px 14px;
+
+	/* Дизайн таблицы (§6.3): перекрываются инлайн-стилями из админки. */
+	--rvn-compare-table-bg: #ffffff;
+	--rvn-compare-header-bg: #ffffff;
+	--rvn-compare-label-bg: #f3f4f6;
+	--rvn-compare-group-bg: #f3f4f6;
+	--rvn-compare-group-soft: #f3f4f6;
+	--rvn-compare-value-text: #1f2937;
+	--rvn-compare-label-text: #000000;
+	--rvn-compare-arrow-bg: #ffffff;
+	--rvn-compare-floating-bg: #ffffff;
+	--rvn-compare-label-size: 13px;
+	--rvn-compare-group-size: 14px;
+	--rvn-compare-label-weight: 600;
+	--rvn-compare-cell-padding: 8px;
+	--rvn-compare-photo-height: 120px;
 }
 
 /* Кнопка сравнения товара */
@@ -113,7 +130,7 @@
 	--rvn-compare-accent: #2563eb;
 	border: 1px solid var(--rvn-compare-border);
 	border-radius: var(--rvn-compare-radius);
-	background: var(--rvn-compare-surface);
+	background: var(--rvn-compare-table-bg);
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 }
@@ -253,7 +270,7 @@
 	height: 34px;
 	border-radius: 50%;
 	border: 1px solid var(--rvn-compare-border);
-	background: #fff;
+	background: var(--rvn-compare-arrow-bg);
 	color: var(--rvn-compare-text);
 	font-size: 20px;
 	line-height: 1;
@@ -299,7 +316,7 @@
 	position: sticky;
 	left: 0;
 	z-index: 3;
-	background: var(--rvn-compare-surface);
+	background: var(--rvn-compare-header-bg);
 	border-right: 1px solid var(--rvn-compare-border);
 }
 
@@ -314,6 +331,7 @@
 	border-right: 1px solid var(--rvn-compare-border);
 	padding: 12px;
 	box-sizing: border-box;
+	background: var(--rvn-compare-header-bg);
 }
 
 .rvn-compare-col__remove {
@@ -336,7 +354,7 @@
 .rvn-compare-col__thumb {
 	display: block;
 	text-align: center;
-	height: 120px;
+	height: var(--rvn-compare-photo-height);
 	overflow: hidden;
 }
 
@@ -345,6 +363,8 @@
 	max-height: 100%;
 	border-radius: 8px;
 	object-fit: contain;
+	width: 100%;
+	height: 100%;
 }
 
 .rvn-compare-col__title {
@@ -381,6 +401,25 @@
 	font-weight: 500;
 }
 
+/* Слот «Купить» плавающей панели виден только в клоне плавающей панели. */
+.rvn-compare-buy-slot--floating-only {
+	display: none;
+}
+
+/* Нижний слот: появляется под колонкой на десктопе (по настройке). */
+.rvn-compare-col--header {
+	flex-wrap: wrap;
+}
+
+.rvn-compare-col--header .rvn-compare-buy-slot[data-buy-slot="bottom"] {
+	width: 100%;
+	margin-top: 2px;
+}
+
+.rvn-compare-buy-slot:empty {
+	display: none;
+}
+
 .rvn-compare-buy:hover {
 	color: #fff;
 	filter: brightness(0.95);
@@ -404,12 +443,12 @@
 	gap: 8px;
 	width: 100%;
 	border: 0;
-	background: var(--rvn-compare-bg-soft);
+	background: var(--rvn-compare-group-bg);
 	color: var(--rvn-compare-text);
 	border-radius: 8px;
 	padding: 8px 14px;
 	cursor: pointer;
-	font-size: 14px;
+	font-size: var(--rvn-compare-group-size);
 	font-weight: 600;
 	margin: 12px 8px 4px;
 	box-sizing: border-box;
@@ -439,12 +478,12 @@
 	position: sticky;
 	left: 0;
 	z-index: 2;
-	background: var(--rvn-compare-surface);
+	background: var(--rvn-compare-label-bg);
 	border-right: 1px solid var(--rvn-compare-border);
-	padding: 8px 12px;
-	font-size: 13px;
-	font-weight: 600;
-	color: #000;
+	padding: var(--rvn-compare-cell-padding) 12px;
+	font-size: var(--rvn-compare-label-size);
+	font-weight: var(--rvn-compare-label-weight);
+	color: var(--rvn-compare-label-text);
 	box-sizing: border-box;
 }
 
@@ -456,8 +495,10 @@
 .rvn-compare-row__value {
 	flex: 0 0 auto;
 	min-width: 0;
-	padding: 8px 12px;
-	font-size: 13px;
+	padding: var(--rvn-compare-cell-padding) 12px;
+	font-size: var(--rvn-compare-font-size);
+	font-weight: var(--rvn-compare-value-weight);
+	color: var(--rvn-compare-value-text);
 	overflow-wrap: anywhere;
 	box-sizing: border-box;
 }
@@ -473,7 +514,7 @@
 	right: 0;
 	top: 0;
 	z-index: 99999;
-	background: #fff;
+	background: var(--rvn-compare-floating-bg);
 	border-bottom: 1px solid var(--rvn-compare-border);
 	box-shadow: 0 6px 20px rgba(0,0,0,0.10);
 	display: none;
@@ -495,12 +536,28 @@
 	box-sizing: border-box;
 }
 
-.rvn-compare-floating__col .rvn-compare-col__buy {
+/* В панели минимум деталей: нет фото-блока (кроме режима «без кнопки»), */
+/* нет стока и нижнего слота — только компактная кнопка действия. */
+.rvn-compare-floating__col .rvn-compare-col__buy,
+.rvn-compare-floating__col .rvn-compare-col__stock,
+.rvn-compare-floating__col .rvn-compare-buy-slot[data-buy-slot="bottom"] {
 	display: none;
 }
 
-.rvn-compare-floating__col .rvn-compare-col__stock {
+/* Слот плавающей панели (класс --floating-only скрыт в основной таблице,
+ * но в клоне панели показывается — это и есть компактная кнопка). */
+.rvn-compare-floating__col .rvn-compare-buy-slot[data-buy-slot="floating"] {
+	display: block;
+	margin-top: 2px;
+}
+
+.rvn-compare-floating__col .rvn-compare-col__thumb {
 	display: none;
+}
+
+.rvn-compare-floating__col .rvn-compare-col__thumb.is-shown {
+	display: block;
+	height: 48px;
 }
 
 /* Мобильные */

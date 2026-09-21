@@ -77,6 +77,12 @@ final class RVN_Compare_Assets {
 			'window.rvnCompareState = ' . wp_json_encode( $this->frontend_state() ) . ';',
 			'before'
 		);
+
+		// Инлайн-стили дизайна таблицы (CSS-переменные + object-fit), §6.3.
+		wp_add_inline_style(
+			'rvn-compare',
+			RVN_Compare_Settings::instance()->design_css()
+		);
 	}
 
 	/**

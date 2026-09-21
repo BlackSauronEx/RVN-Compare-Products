@@ -31,9 +31,16 @@ $ids      = $structure['ids'];
 $products = $structure['products'];
 $groups   = $structure['groups'];
 
-$settings   = RVN_Compare_Settings::instance();
+$settings = RVN_Compare_Settings::instance();
+
+$settings_design = (array) $settings->get( 'design', array() );
+$def_design      = (array) $settings->defaults()['design'];
+$buy_header      = isset( $settings_design['behavior']['buy_header'] ) ? $settings_design['behavior']['buy_header'] : $def_design['behavior']['buy_header'];
+$buy_bottom      = isset( $settings_design['behavior']['buy_bottom'] ) ? $settings_design['behavior']['buy_bottom'] : $def_design['behavior']['buy_bottom'];
+$buy_floating    = isset( $settings_design['behavior']['buy_floating'] ) ? $settings_design['behavior']['buy_floating'] : $def_design['behavior']['buy_floating'];
+$photo_fit       = isset( $settings_design['geometry']['photo_fit'] ) ? $settings_design['geometry']['photo_fit'] : $def_design['geometry']['photo_fit'];
+
 $show_stock = '1' === (string) $settings->get( 'show_stock', '1' );
-$photo_fit  = (string) $settings->get( 'photo_fit', 'contain' );
 
 $columns = array(
 	'desktop' => (int) $settings->get( 'columns_desktop', 5 ),
@@ -78,15 +85,8 @@ $count = count( $ids );
 
 						<span class="rvn-compare-col__price"><?php echo $price; // phpcs:ignore WordPress.Security.EscapeOutput -- get_price_html(). ?></span>
 
-						<div class="rvn-compare-col__buy">
-							<?php
-							$is_variable = $product->is_type( 'variable' );
-							if ( $is_variable ) :
-								?>
-								<a class="rvn-compare-buy" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'Выбрать вариант', 'rvn-compare' ); ?></a>
-							<?php else : ?>
-								<a class="rvn-compare-buy" href="<?php echo esc_url( $url ); ?>?add-to-cart=<?php echo (int) $id; ?>"><?php esc_html_e( 'Купить', 'rvn-compare' ); ?></a>
-							<?php endif; ?>
+						<div class="rvn-compare-col__buy rvn-compare-buy-slot" data-buy-slot="header">
+							<?php rvn_compare_buy_button( $product, $id, $buy_header ); ?>
 
 							<?php if ( $show_stock ) : ?>
 								<span class="rvn-compare-col__stock">
@@ -99,6 +99,9 @@ $count = count( $ids );
 								</span>
 							<?php endif; ?>
 						</div>
+
+						<div class="rvn-compare-buy-slot" data-buy-slot="bottom"><?php rvn_compare_buy_button( $product, $id, $buy_bottom ); ?></div>
+						<div class="rvn-compare-buy-slot rvn-compare-buy-slot--floating-only" data-buy-slot="floating"><?php rvn_compare_buy_button( $product, $id, $buy_floating ); ?></div>
 					</div>
 				<?php endforeach; ?>
 			</div>

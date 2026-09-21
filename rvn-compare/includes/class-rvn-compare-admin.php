@@ -461,7 +461,259 @@ final class RVN_Compare_Admin {
 	}
 
 	private function render_design_tab( $all ) {
-		echo '<p>' . esc_html__( 'Полный конструктор дизайна таблицы — в Этапе 2 (см. живое ТЗ §6.3). Сейчас доступен только акцент.', 'rvn-compare' ) . '</p>';
+		$settings = RVN_Compare_Settings::instance();
+		$design   = (array) $this->setting_value( $all, 'design', array() );
+		$def      = (array) $settings->defaults()['design'];
+
+		echo '<div class="rvn-compare-design">';
+		echo '<div class="rvn-compare-design__form">';
+
+		// ---- Цвета ----
+		echo '<h2 class="title">' . esc_html__( 'Цвета', 'rvn-compare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$colors = array(
+			'table_bg'      => __( 'Фон таблицы', 'rvn-compare' ),
+			'header_bg'     => __( 'Фон шапки (фото/название)', 'rvn-compare' ),
+			'label_bg'      => __( 'Фон строк-названий', 'rvn-compare' ),
+			'group_bg'      => __( 'Фон заголовков групп', 'rvn-compare' ),
+			'group_soft_bg' => __( 'Мягкий фон групп', 'rvn-compare' ),
+			'text'          => __( 'Текст значений', 'rvn-compare' ),
+			'value_text'    => __( 'Текст значений (таблица)', 'rvn-compare' ),
+			'label_text'    => __( 'Названия полей', 'rvn-compare' ),
+			'accent'        => __( 'Акцент ([?], вкладки, бейдж)', 'rvn-compare' ),
+			'diff_bg'       => __( 'Подсветка различий', 'rvn-compare' ),
+			'arrow_bg'      => __( 'Фон стрелок слайдера', 'rvn-compare' ),
+			'floating_bg'   => __( 'Фон плавающей панели', 'rvn-compare' ),
+			'border'        => __( 'Рамка таблицы', 'rvn-compare' ),
+		);
+		$this->design_color_row( 'colors', 'table_bg', $colors['table_bg'], $design, $def, __( 'Общий фон области таблицы.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'header_bg', $colors['header_bg'], $design, $def, __( 'Фон колонок с фото и названием товара.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'label_bg', $colors['label_bg'], $design, $def, __( 'Полоска с названием характеристики (слева).', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'group_bg', $colors['group_bg'], $design, $def, __( 'Полноширинные заголовки групп.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'group_soft_bg', $colors['group_soft_bg'], $design, $def, __( 'Используется при включённом «мягком фоне группы».', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'text', $colors['text'], $design, $def, __( 'Базовый цвет текста.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'value_text', $colors['value_text'], $design, $def, __( 'Цвет значений в ячейках.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'label_text', $colors['label_text'], $design, $def, __( 'Заголовки всегда чёрные по умолчанию.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'accent', $colors['accent'], $design, $def, __( 'Кнопки «Купить», активная вкладка, ссылки, [?] и бейдж.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'diff_bg', $colors['diff_bg'], $design, $def, __( 'Подложка ячеек с различающимися значениями.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'arrow_bg', $colors['arrow_bg'], $design, $def, __( 'Круглые стрелки прокрутки слайдера.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'floating_bg', $colors['floating_bg'], $design, $def, __( 'Фиксированная панель при прокрутке.', 'rvn-compare' ) );
+		$this->design_color_row( 'colors', 'border', $colors['border'], $design, $def, __( 'Рамки и разделители внутри таблицы.', 'rvn-compare' ) );
+		echo '</tbody></table>';
+
+		// ---- Типографика ----
+		echo '<h2 class="title">' . esc_html__( 'Типографика', 'rvn-compare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$this->design_number_row( 'types', 'value_size', __( 'Размер значений, px', 'rvn-compare' ), $design, $def, __( 'Размер текста ячеек (по умолчанию 14).', 'rvn-compare' ) );
+		$this->design_number_row( 'types', 'label_size', __( 'Размер названий, px', 'rvn-compare' ), $design, $def, __( 'Размер подписей характеристик (по умолчанию 13).', 'rvn-compare' ) );
+		$this->design_number_row( 'types', 'group_size', __( 'Размер групп, px', 'rvn-compare' ), $design, $def, __( 'Размер заголовков групп (по умолчанию 14).', 'rvn-compare' ) );
+		$this->design_number_row( 'types', 'label_weight', __( 'Насыщенность названий', 'rvn-compare' ), $design, $def, __( '400–900 (по умолчанию 600).', 'rvn-compare' ) );
+		$this->design_number_row( 'types', 'value_weight', __( 'Насыщенность значений', 'rvn-compare' ), $design, $def, __( '400–900 (по умолчанию 400).', 'rvn-compare' ) );
+		echo '</tbody></table>';
+
+		// ---- Геометрия ----
+		echo '<h2 class="title">' . esc_html__( 'Геометрия', 'rvn-compare' ) . '</h2>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$this->design_number_row( 'geometry', 'radius', __( 'Скругление, px', 'rvn-compare' ), $design, $def, __( 'Радиус углов таблицы (по умолчанию 12).', 'rvn-compare' ) );
+		$this->design_number_row( 'geometry', 'cell_padding', __( 'Паддинги ячеек, px', 'rvn-compare' ), $design, $def, __( 'Внутренний отступ ячеек (по умолчанию 8).', 'rvn-compare' ) );
+		$this->design_number_row( 'geometry', 'photo_height', __( 'Высота фото, px', 'rvn-compare' ), $design, $def, __( 'Высота рамки фото в шапке (по умолчанию 120).', 'rvn-compare' ) );
+		$this->design_select_row( 'geometry', 'photo_fit', __( 'Подгонка фото (object-fit)', 'rvn-compare' ), $design, $def, array(
+			'contain' => __( 'Вписать целиком (contain)', 'rvn-compare' ),
+			'cover'   => __( 'Заполнить (cover)', 'rvn-compare' ),
+		), __( 'Как фото вписывается в рамку (R2-14).', 'rvn-compare' ) );
+		echo '</tbody></table>';
+
+		// ---- Кнопки «Купить» ----
+		echo '<h2 class="title">' . esc_html__( 'Кнопка «Купить» в таблице', 'rvn-compare' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Что показывать в трёх местах таблицы: стандартную кнопку «Купить», свой шорткод или ничего.', 'rvn-compare' ) . '</p>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$this->design_select_row( 'behavior', 'buy_header', __( 'В шапке (под товаром)', 'rvn-compare' ), $design, $def, array(
+			'buy'       => __( 'Кнопка «Купить»', 'rvn-compare' ),
+			'shortcode' => __( 'Мой шорткод', 'rvn-compare' ),
+			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
+		), __( 'Кнопка под названием/ценой товара (R4-03).', 'rvn-compare' ) );
+		$this->design_select_row( 'behavior', 'buy_bottom', __( 'Внизу таблицы', 'rvn-compare' ), $design, $def, array(
+			'buy'       => __( 'Кнопка «Купить»', 'rvn-compare' ),
+			'shortcode' => __( 'Мой шорткод', 'rvn-compare' ),
+			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
+		), __( 'Нижний ряд таблицы. Шорткод для шапки/низа выводится в самих местах с 0 аргументами.', 'rvn-compare' ) );
+		$this->design_select_row( 'behavior', 'buy_floating', __( 'В плавающей панели', 'rvn-compare' ), $design, $def, array(
+			'buy'       => __( 'Кнопка «Купить»', 'rvn-compare' ),
+			'shortcode' => __( 'Мой шорткод', 'rvn-compare' ),
+			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
+		), __( 'Компактная панель при прокрутке. Если скрыто — показывается фото.', 'rvn-compare' ) );
+		echo '</tbody></table>';
+
+		// Мягкий фон групп.
+		$soft = $this->setting_value( $design, 'behavior', array() );
+		$soft = is_array( $soft ) ? $soft : array();
+		$checked = isset( $soft['soft_bg_enabled'] ) ? $soft['soft_bg_enabled'] : $def['behavior']['soft_bg_enabled'];
+		echo '<table class="form-table" role="presentation"><tbody>';
+		echo '<tr><th scope="row">' . esc_html__( 'Мягкий фон групп', 'rvn-compare' ) . '</th><td>';
+		printf( '<label><input type="checkbox" name="design[behavior][soft_bg_enabled]" value="1" %s /> %s</label>', checked( '1', (string) $checked, false ), esc_html__( 'Включено', 'rvn-compare' ) );
+		echo '<p class="description">' . esc_html__( 'Добавлять мягкую цветную подложку заголовкам групп.', 'rvn-compare' ) . '</p>';
+		echo '</td></tr>';
+		echo '</tbody></table>';
+
+		echo '</div>'; // .rvn-compare-design__form
+
+		// ---- Живой предпросмотр (sticky) ----
+		echo '<div class="rvn-compare-design__preview">';
+		$this->render_design_preview( $all );
+
+		// Уже сохранённые значения дизайна — как исходные CSS-переменные
+		// превью (JS обновит их мгновенно по мере ввода в форму). CSS собран
+		// исключительно из санитизированных значений (hex/absint/esc_attr).
+		echo '<style id="rvn-compare-design-css">' . $settings->design_css() . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo '</div>';
+
+		echo '</div>';
+	}
+
+	/**
+	 * Возвращает значение дизайн-настройки (секция/поле) с фолбэком на дефолт.
+	 *
+	 * @param array  $design  Текущий массив дизайна.
+	 * @param string $section Секция.
+	 * @param string $field   Поле.
+	 * @param array  $def     Дефолты дизайна.
+	 * @return mixed
+	 */
+	private function design_setting( $design, $section, $field, $def ) {
+		if ( isset( $design[ $section ][ $field ] ) && '' !== (string) $design[ $section ][ $field ] ) {
+			return $design[ $section ][ $field ];
+		}
+		return isset( $def[ $section ][ $field ] ) ? $def[ $section ][ $field ] : '';
+	}
+
+	/**
+	 * Печатает строку выбора цвета (color picker WP) для вкладки «Дизайн таблицы».
+	 *
+	 * @param string $section Секция дизайна.
+	 * @param string $field   Поле.
+	 * @param string $label   Подпись.
+	 * @param array  $design  Текущий дизайн.
+	 * @param array  $def     Дефолты.
+	 * @param string $help    Пояснение.
+	 * @return void
+	 */
+	private function design_color_row( $section, $field, $label, $design, $def, $help = '' ) {
+		$value = $this->design_setting( $design, $section, $field, $def );
+		printf( '<tr><th scope="row"><label for="%1$s">%2$s</label></th><td>', esc_attr( 'd_' . $field ), esc_html( $label ) );
+		printf(
+			'<input type="text" id="%1$s" name="%2$s" value="%3$s" class="rvn-compare-color" data-default-color="%4$s" />',
+			esc_attr( 'd_' . $field ),
+			esc_attr( 'design[' . $section . '][' . $field . ']' ),
+			esc_attr( $value ),
+			esc_attr( $value )
+		);
+		if ( $help ) {
+			echo '<p class="description">' . esc_html( $help ) . '</p>';
+		}
+		echo '</td></tr>';
+	}
+
+	/**
+	 * Печатает числовую строку вкладки «Дизайн таблицы».
+	 *
+	 * @param string $section Секция.
+	 * @param string $field   Поле.
+	 * @param string $label   Подпись.
+	 * @param array  $design  Текущий дизайн.
+	 * @param array  $def     Дефолты.
+	 * @param string $help    Пояснение.
+	 * @return void
+	 */
+	private function design_number_row( $section, $field, $label, $design, $def, $help = '' ) {
+		$value = $this->design_setting( $design, $section, $field, $def );
+		printf( '<tr><th scope="row"><label for="%1$s">%2$s</label></th><td>', esc_attr( 'd_' . $field ), esc_html( $label ) );
+		printf(
+			'<input type="number" id="%1$s" name="%2$s" value="%3$s" min="0" max="9999" class="small-text" />',
+			esc_attr( 'd_' . $field ),
+			esc_attr( 'design[' . $section . '][' . $field . ']' ),
+			esc_attr( $value )
+		);
+		if ( $help ) {
+			echo '<p class="description">' . esc_html( $help ) . '</p>';
+		}
+		echo '</td></tr>';
+	}
+
+	/**
+	 * Печатает строку-селект вкладки «Дизайн таблицы».
+	 *
+	 * @param string $section Секция.
+	 * @param string $field   Поле.
+	 * @param string $label   Подпись.
+	 * @param array  $design  Текущий дизайн.
+	 * @param array  $def     Дефолты.
+	 * @param array  $options Карта значение => подпись.
+	 * @param string $help    Пояснение.
+	 * @return void
+	 */
+	private function design_select_row( $section, $field, $label, $design, $def, $options, $help = '' ) {
+		$value = $this->design_setting( $design, $section, $field, $def );
+		printf( '<tr><th scope="row"><label for="%1$s">%2$s</label></th><td>', esc_attr( 'd_' . $field ), esc_html( $label ) );
+		printf( '<select id="%1$s" name="%2$s">', esc_attr( 'd_' . $field ), esc_attr( 'design[' . $section . '][' . $field . ']' ) );
+		foreach ( $options as $opt_key => $opt_label ) {
+			printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $opt_key ), selected( $value, $opt_key, false ), esc_html( $opt_label ) );
+		}
+		echo '</select>';
+		if ( $help ) {
+			echo '<p class="description">' . esc_html( $help ) . '</p>';
+		}
+		echo '</td></tr>';
+	}
+
+	/**
+	 * Рендерит демо-таблицу живого предпросмотра вкладки «Дизайн таблицы».
+	 *
+	 * Статическая разметка двух фейковых товаров; JS (admin.js) по вводу
+	 * мгновенно пересчитывает CSS-переменные из полей формы.
+	 *
+	 * @param array $all Текущие настройки.
+	 * @return void
+	 */
+	private function render_design_preview( $all ) {
+		echo '<h2 class="title">' . esc_html__( 'Живой предпросмотр', 'rvn-compare' ) . '</h2>';
+
+		echo '<div class="rvn-compare-preview rvn-compare-table" data-rvn-compare-design-preview>' . "
+";
+
+		echo '<div class="rvn-compare-tabs"><button type="button" class="rvn-compare-tab is-active">' . esc_html__( 'Смартфоны', 'rvn-compare' ) . '</button><button type="button" class="rvn-compare-tab">' . esc_html__( 'Ноутбуки', 'rvn-compare' ) . '</button></div>';
+
+		echo '<div class="rvn-compare-scroller"><div class="rvn-compare-clip"><div class="rvn-compare-track"><div class="rvn-compare-columns">' . "
+";
+		echo '<div class="rvn-compare-corner" aria-hidden="true"></div>';
+
+		$demo = array(
+			array( 'name' => __( 'Смартфон A', 'rvn-compare' ), 'price' => '23 990 ₽' ),
+			array( 'name' => __( 'Смартфон B', 'rvn-compare' ), 'price' => '27 490 ₽' ),
+		);
+		foreach ( $demo as $d ) {
+			echo '<div class="rvn-compare-col rvn-compare-col--header"><span class="rvn-compare-col__thumb"></span><span class="rvn-compare-col__title">' . esc_html( $d['name'] ) . '</span><span class="rvn-compare-col__price">' . esc_html( $d['price'] ) . '</span><a class="rvn-compare-buy" href="#">' . esc_html__( 'Купить', 'rvn-compare' ) . '</a></div>';
+		}
+		echo '</div>'; // /columns
+
+		echo '<div class="rvn-compare-rows"><div class="rvn-compare-group">' . "
+";
+		echo '<button type="button" class="rvn-compare-group__head"><span class="rvn-compare-group__title">' . esc_html__( 'Основное', 'rvn-compare' ) . '</span><span class="rvn-compare-group__arrow" aria-hidden="true">▲</span></button>';
+		echo '<div class="rvn-compare-group__body">' . "
+";
+
+		$rows = array(
+			array( __( 'Экран', 'rvn-compare' ), '6.1"', '6.7"' ),
+			array( __( 'Память', 'rvn-compare' ), '128 ГБ', '256 ГБ' ),
+		);
+		foreach ( $rows as $r ) {
+			echo '<div class="rvn-compare-row' . ( $r[1] !== $r[2] ? ' has-diff' : '' ) . '"><div class="rvn-compare-row__label"><span>' . esc_html( $r[0] ) . '</span></div><div class="rvn-compare-row__values">';
+			echo '<span class="rvn-compare-row__value">' . esc_html( $r[1] ) . '</span><span class="rvn-compare-row__value">' . esc_html( $r[2] ) . '</span>';
+			echo '</div></div>';
+		}
+
+		echo '</div></div></div>'; // /body /group /rows
+		echo '</div></div></div></div>'; // /track /clip /scroller
+		echo '</div>'; // /preview
 	}
 
 	/**
@@ -541,6 +793,10 @@ final class RVN_Compare_Admin {
 		} elseif ( 'fields' === $tab ) {
 			// Вкладка «Таблица сравнения»: сложные структуры + скалярные поля.
 			$this->handle_fields_save();
+			$msg = 'saved';
+		} elseif ( 'design' === $tab ) {
+			// Вкладка «Дизайн таблицы»: плоские ключи design[секция][поле].
+			$settings->save_from_request( wp_unslash( $_POST ) );
 			$msg = 'saved';
 		} elseif ( 'general' === $tab && isset( $_POST['rvn_compare_action'] ) ) {
 			$action = sanitize_key( (string) $_POST['rvn_compare_action'] );

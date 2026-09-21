@@ -108,6 +108,7 @@ final class RVN_Compare_Registry {
 	public static function boot() {
 		require_once RVN_COMPARE_DIR . 'includes/class-rvn-compare-plugin.php';
 		require_once RVN_COMPARE_DIR . 'includes/class-rvn-compare-compatibility.php';
+		require_once RVN_COMPARE_DIR . 'includes/template-helpers.php';
 
 		spl_autoload_register( array( __CLASS__, 'autoload' ) );
 

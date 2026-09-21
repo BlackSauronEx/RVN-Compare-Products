@@ -354,6 +354,19 @@
 			var clone = cols[ i ].cloneNode( true );
 			clone.classList.add( 'rvn-compare-floating__col' );
 			clone.removeAttribute( 'data-rvn-compare-col' );
+
+			// «Купить» в плавающей панели: кнопка кладётся на сервере в
+			// скрытом слоте data-buy-slot="floating" (настройка buy_floating);
+			// при empty (режим hidden) показываем фото товара.
+			var dst = clone.querySelector( '[data-buy-slot="floating"]' );
+			if ( dst && ! dst.querySelector( '.rvn-compare-buy' ) ) {
+				dst.classList.add( 'is-empty' );
+				var thumb = clone.querySelector( '.rvn-compare-col__thumb' );
+				if ( thumb ) {
+					thumb.classList.add( 'is-shown' );
+				}
+			}
+
 			row.appendChild( clone );
 		}
 
