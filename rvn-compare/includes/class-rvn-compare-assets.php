@@ -148,6 +148,7 @@ final class RVN_Compare_Assets {
 			),
 			'archivePosition' => (string) $settings->get( 'archive_button_position', 'after_add_to_cart' ),
 			'singlePosition'  => (string) $settings->get( 'single_button_position', 'after_add_to_cart' ),
+			'excluded'        => array_values( array_map( 'absint', (array) $settings->get( 'excluded_products', array() ) ) ),
 			'i18n'    => array(
 				'added'        => (string) $settings->get( 'toast_added_text' ),
 				'removed'      => (string) $settings->get( 'toast_removed_text' ),

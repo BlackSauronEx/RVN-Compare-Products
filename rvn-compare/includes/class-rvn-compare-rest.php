@@ -71,7 +71,7 @@ final class RVN_Compare_Rest {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'handle_toggle' ),
-				'permission_callback' => array( $this, 'permission' ),
+				'permission_callback' => array( $this, 'mutate_permission' ),
 				'args'                => array(
 					'product_id' => array(
 						'required'          => true,
@@ -94,7 +94,7 @@ final class RVN_Compare_Rest {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'handle_remove' ),
-				'permission_callback' => array( $this, 'permission' ),
+				'permission_callback' => array( $this, 'mutate_permission' ),
 				'args'                => array(
 					'product_id' => array(
 						'required'          => true,
@@ -113,7 +113,7 @@ final class RVN_Compare_Rest {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'handle_clear' ),
-				'permission_callback' => array( $this, 'permission' ),
+				'permission_callback' => array( $this, 'mutate_permission' ),
 			)
 		);
 
@@ -123,7 +123,7 @@ final class RVN_Compare_Rest {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'handle_merge' ),
-				'permission_callback' => array( $this, 'permission' ),
+				'permission_callback' => array( $this, 'mutate_permission' ),
 				'args'                => array(
 					'items' => array(
 						'required'          => true,
@@ -166,6 +166,30 @@ final class RVN_Compare_Rest {
 		return is_user_logged_in() && wp_verify_nonce( self::nonce(), 'wp_rest' )
 			? true
 			: current_user_can( 'manage_woocommerce' );
+	}
+
+	/**
+	 * Порядок обработки POST-мутации: throttle + валидация.
+	 *
+	 * @param WP_REST_Request $request Запрос.
+	 * @return true|WP_Error
+	 */
+	public function mutate_permission( $request ) {
+		$base = $this->permission();
+		if ( true !== $base ) {
+			return $base;
+		}
+
+		// Для гостей всегда разрешено (check() вернёт true).
+		if ( ! RVN_Compare_Rate_Limit::check() ) {
+			return new WP_Error(
+				'rvn_compare_rate_limited',
+				__( 'Слишком много запросов. Попробуйте через секунду.', 'rvn-compare' ),
+				array( 'status' => 429 )
+			);
+		}
+
+		return true;
 	}
 
 	/**

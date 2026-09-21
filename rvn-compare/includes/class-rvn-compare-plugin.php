@@ -61,6 +61,7 @@ final class RVN_Compare_Plugin {
 			'RVN_Compare_Assets',
 			'RVN_Compare_Admin',
 			'RVN_Compare_Shortcodes',
+			'RVN_Compare_Buttons',
 		);
 
 		foreach ( $components as $class ) {
