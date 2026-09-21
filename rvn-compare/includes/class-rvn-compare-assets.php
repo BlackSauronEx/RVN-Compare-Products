@@ -83,6 +83,12 @@ final class RVN_Compare_Assets {
 			'rvn-compare',
 			RVN_Compare_Settings::instance()->design_css()
 		);
+
+		// Инлайн-стили элементов (кнопки/тосты), §6.4.
+		wp_add_inline_style(
+			'rvn-compare',
+			RVN_Compare_Design::instance()->elements_css()
+		);
 	}
 
 	/**
@@ -142,6 +148,7 @@ final class RVN_Compare_Assets {
 			'count'        => count( RVN_Compare_Storage::instance()->get_items() ),
 			'animationMs'  => (int) $settings->get( 'animation_speed', 300 ),
 			'toastMs'      => (int) $settings->get( 'toast_duration', 3200 ),
+			'toasts'       => RVN_Compare_Design::instance()->elements_data(),
 			'accent'       => (string) $settings->get( 'accent_color', '#2563eb' ),
 			'breakpoints'  => array(
 				'tablet' => (int) $settings->get( 'breakpoint_tablet', 1024 ),

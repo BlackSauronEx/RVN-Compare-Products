@@ -302,6 +302,11 @@ final class RVN_Compare_Settings {
 			if ( null !== $this->sanitize_design( $key, $raw, $current, $sanitized ) ) {
 				continue;
 			}
+
+			// Стили кнопок/тостов вкладки «Дизайн элементов и кнопок».
+			if ( null !== $this->sanitize_element( $key, $raw, $current, $sanitized ) ) {
+				continue;
+			}
 		}
 
 		/*
@@ -353,15 +358,18 @@ final class RVN_Compare_Settings {
 				'include_subcats',
 				'custom_attributes',
 			),
-			'elements' => array(
-				'button_text',
-				'button_added_text',
-				'counter_button_text',
-				'clear_confirm_text',
-				'toast_added_text',
-				'toast_removed_text',
-				'toast_cleared_text',
-				'toast_limit_text',
+			'elements' => array_merge(
+				array(
+					'button_text',
+					'button_added_text',
+					'counter_button_text',
+					'clear_confirm_text',
+					'toast_added_text',
+					'toast_removed_text',
+					'toast_cleared_text',
+					'toast_limit_text',
+				),
+				$this->element_style_keys()
 			),
 			'design'   => $this->design_keys(),
 			'help'     => array(),
@@ -675,6 +683,142 @@ final class RVN_Compare_Settings {
 		}
 
 		$this->replace( $all );
+	}
+
+	/*
+	 * ---- Дизайн элементов и кнопок (§6.4, RD-02) ----
+	 * Хранится в button_styles / toast_styles; форма использует плоские
+	 * ключи вида es[<раздел>][<ключ>][normal][<поле>].
+	 */
+
+	/**
+	 * Плоский список POST-ключей вкладки «Дизайн элементов и кнопок».
+	 *
+	 * @return string[]
+	 */
+	private function element_style_keys() {
+		$keys   = array();
+		$groups = array( 'compare', 'added', 'counter' );
+		$toasts = array( 'added', 'removed', 'cleared', 'limit' );
+		$normal = array( 'bg', 'color', 'border', 'border_width', 'radius', 'font_size', 'font_weight', 'padding' );
+		$hover  = array( 'bg', 'color', 'border' );
+		$toast_f = array( 'icon', 'icon_position', 'position_desktop', 'position_mobile', 'progress', 'bg', 'color', 'border', 'accent' );
+
+		foreach ( $groups as $g ) {
+			$keys[] = 'es[' . $g . '][mode]';
+			$keys[] = 'es[' . $g . '][svg]';
+			$keys[] = 'es[' . $g . '][badge_position]';
+			$keys[] = 'es[' . $g . '][class]';
+			foreach ( $normal as $f ) {
+				$keys[] = 'es[' . $g . '][normal][' . $f . ']';
+			}
+			foreach ( $hover as $f ) {
+				$keys[] = 'es[' . $g . '][hover][' . $f . ']';
+			}
+		}
+
+		foreach ( $toasts as $t ) {
+			foreach ( $toast_f as $f ) {
+				$keys[] = 'es[' . $t . '][toast][' . $f . ']';
+			}
+		}
+
+		return $keys;
+	}
+
+	/**
+	 * Санитизирует одно поле элементов (вызывается из save_from_request()).
+	 *
+	 * @param string $key       Плоский ключ (es[...]) или любой другой ключ — вернём null.
+	 * @param array  $raw       Сырые данные формы.
+	 * @param array  $current   Текущие настройки.
+	 * @param array  $sanitized Санитизированный массив (по ссылке).
+	 * @return bool|null true — обработано; null — не элемент-ключ.
+	 */
+	private function sanitize_element( $key, $raw, $current, &$sanitized ) {
+		if ( 0 !== strpos( (string) $key, 'es[' ) ) {
+			return null;
+		}
+		if ( ! preg_match( '/^es\[([a-z_]+)\]\[(normal|hover|toast|mode|svg|badge_position|class)\]?(?:\[([a-z_]+)\])?$/', (string) $key, $m ) ) {
+			return null;
+		}
+
+		$part    = $m[1];   // compare|added|counter|added|removed|cleared|limit
+		$field   = $m[2];   // normal|hover|toast|mode|svg|badge_position|class
+		$sub     = isset( $m[3] ) ? $m[3] : ''; // поле внутри normal/hover/toast
+
+		$value = null;
+		if ( 'toast' === $field ) {
+			$value = isset( $raw['es'][ $part ]['toast'][ $sub ] ) ? $raw['es'][ $part ]['toast'][ $sub ] : null;
+		} elseif ( in_array( $field, array( 'normal', 'hover' ), true ) ) {
+			$value = isset( $raw['es'][ $part ][ $field ][ $sub ] ) ? $raw['es'][ $part ][ $field ][ $sub ] : null;
+		} else {
+			$value = isset( $raw['es'][ $part ][ $field ] ) ? $raw['es'][ $part ][ $field ] : null;
+		}
+
+		$design = RVN_Compare_Design::instance();
+		$buttons = $design->buttons();
+		$toasts  = $design->toasts();
+
+		// Тосты: часть 'added' пересекается с кнопкой, поэтому ветку
+		// выбираем по полю — наличие [toast][...] означает тост.
+		if ( 'toast' === $field && in_array( $part, array_keys( $toasts ), true ) ) {
+			$def = $design->toast_defaults();
+			$cur_t = isset( $toasts[ $part ][ $sub ] ) && '' !== (string) $toasts[ $part ][ $sub ] ? $toasts[ $part ][ $sub ] : $def[ $part ][ $sub ];
+
+			if ( in_array( $sub, array( 'bg', 'color', 'border', 'accent' ), true ) ) {
+				$h = ( null !== $value ) ? sanitize_hex_color( $value ) : '';
+				$sanitized['toast_styles'][ $part ][ $sub ] = $h ? $h : $cur_t;
+			} elseif ( 'icon' === $sub ) {
+				$sanitized['toast_styles'][ $part ][ 'icon' ] = $design->svg_sanitize( (string) $value );
+			} elseif ( 'icon_position' === $sub ) {
+				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
+				$sanitized['toast_styles'][ $part ][ 'icon_position' ] = in_array( $v, array( 'left', 'right' ), true ) ? $v : $cur_t;
+			} elseif ( in_array( $sub, array( 'position_desktop', 'position_mobile' ), true ) ) {
+				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
+				$sanitized['toast_styles'][ $part ][ $sub ] = in_array( $v, $design->toast_positions(), true ) ? $v : $cur_t;
+			} elseif ( 'progress' === $sub ) {
+				$sanitized['toast_styles'][ $part ][ 'progress' ] = ( isset( $raw['es'][ $part ]['toast']['progress'] ) && $raw['es'][ $part ]['toast']['progress'] ) ? '1' : '0';
+			} else {
+				$sanitized['toast_styles'][ $part ][ $sub ] = ( null !== $value ) ? sanitize_text_field( wp_unslash( $value ) ) : $cur_t;
+			}
+
+			return true;
+		}
+
+		if ( in_array( $part, array( 'compare', 'added', 'counter' ), true ) ) {
+			$cur = isset( $buttons[ $part ] ) ? $buttons[ $part ] : array();
+
+			if ( 'mode' === $field ) {
+				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
+				$sanitized['button_styles'][ $part ]['mode'] = in_array( $v, $design->button_modes(), true ) ? $v : ( isset( $cur['mode'] ) ? $cur['mode'] : 'icon_text' );
+			} elseif ( 'svg' === $field ) {
+				$sanitized['button_styles'][ $part ]['svg'] = $design->svg_sanitize( (string) $value );
+			} elseif ( 'badge_position' === $field ) {
+				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
+				$sanitized['button_styles'][ $part ]['badge_position'] = in_array( $v, array( '', 'left', 'right', 'top' ), true ) ? $v : ( isset( $cur['badge_position'] ) ? $cur['badge_position'] : '' );
+			} elseif ( 'class' === $field ) {
+				$sanitized['button_styles'][ $part ]['class'] = sanitize_html_class( (string) $value );
+			} else {
+				// normal/hover: поля bg, color, border — hex; числа; padding.
+				$defaults = $design->button_defaults();
+				$def = isset( $defaults[ $part ][ $field ][ $sub ] ) ? $defaults[ $part ][ $field ][ $sub ] : '';
+				$cur_v = isset( $cur[ $field ][ $sub ] ) && '' !== (string) $cur[ $field ][ $sub ] ? $cur[ $field ][ $sub ] : $def;
+
+				if ( in_array( $sub, array( 'bg', 'color', 'border' ), true ) ) {
+					$h = ( null !== $value ) ? sanitize_hex_color( $value ) : '';
+					$sanitized['button_styles'][ $part ][ $field ][ $sub ] = $h ? $h : $cur_v;
+				} elseif ( 'padding' === $sub ) {
+					$sanitized['button_styles'][ $part ][ $field ][ $sub ] = ( null !== $value && '' !== (string) $value ) ? sanitize_text_field( wp_unslash( $value ) ) : $cur_v;
+				} else {
+					$sanitized['button_styles'][ $part ][ $field ][ $sub ] = ( null !== $value && '' !== (string) $value ) ? absint( $value ) : $cur_v;
+				}
+			}
+
+			return true;
+		}
+
+		return null;
 	}
 
 	/*

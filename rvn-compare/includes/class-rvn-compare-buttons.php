@@ -139,8 +139,11 @@ final class RVN_Compare_Buttons {
 	 */
 	public static function button_html( $id, $position = '', $context = '', $extra_class = '' ) {
 		$settings = RVN_Compare_Settings::instance();
+		$design   = RVN_Compare_Design::instance();
+		$buttons  = $design->buttons();
+		$cfg      = isset( $buttons['compare'] ) ? $buttons['compare'] : array();
 
-		$classes = array( 'rvn-compare-button' );
+		$classes = array( 'rvn-compare-button', 'rvn-compare-button--' . ( isset( $cfg['mode'] ) ? $cfg['mode'] : 'icon_text' ) );
 		if ( $position ) {
 			$classes[] = 'rvn-compare-button--' . sanitize_html_class( $position );
 		}
@@ -150,8 +153,14 @@ final class RVN_Compare_Buttons {
 		if ( 0 === strpos( (string) $position, 'overlay' ) ) {
 			$classes[] = 'rvn-compare-button--overlay';
 		}
+		if ( isset( $cfg['class'] ) && $cfg['class'] ) {
+			foreach ( preg_split( '/\s+/', trim( $cfg['class'] ) ) as $cls ) {
+				if ( $cls ) {
+					$classes[] = sanitize_html_class( $cls );
+				}
+			}
+		}
 		if ( $extra_class ) {
-			// Разрешаем несколько пользовательских классов через пробел.
 			foreach ( preg_split( '/\s+/', trim( $extra_class ) ) as $cls ) {
 				if ( $cls ) {
 					$classes[] = sanitize_html_class( $cls );
@@ -161,14 +170,15 @@ final class RVN_Compare_Buttons {
 		$class = implode( ' ', array_unique( $classes ) );
 
 		$position_attr = $position ? ' data-rvn-compare-position="' . esc_attr( $position ) . '"' : '';
+		$label         = (string) $settings->get( 'button_text', __( 'Сравнить', 'rvn-compare' ) );
+		$inner         = $design->button_inner_html( 'compare', $label );
 
 		return sprintf(
-			'<button type="button" class="%1$s" data-rvn-compare-add="%2$d" data-rvn-compare-state=""%3$s>' .
-			'<span class="rvn-compare-button__label">%4$s</span></button>',
+			'<button type="button" class="%1$s" data-rvn-compare-add="%2$d" data-rvn-compare-state=""%3$s>%4$s</button>',
 			esc_attr( $class ),
 			(int) $id,
 			$position_attr,
-			esc_html( (string) $settings->get( 'button_text', __( 'Сравнить', 'rvn-compare' ) ) )
+			$inner // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG санитизирован, текст через esc_html.
 		);
 	}
 

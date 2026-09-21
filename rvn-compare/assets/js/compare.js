@@ -102,19 +102,70 @@
 	}
 
 	/**
-	 * Показать всплывающее уведомление (toast).
+	 * Возвращает настройки тоста (по типу), слитые с базовым дефолтом.
 	 */
-	function toast( message ) {
+	function toastCfg( kind ) {
+		var base = {
+			positionDesktop: 'bottom-center',
+			positionMobile: 'bottom-center',
+			progress: true,
+			icon: '',
+			iconPosition: 'left'
+		};
+		var got = ( CFG.toasts && CFG.toasts[ kind ] ) ? CFG.toasts[ kind ] : {};
+		for ( var k in base ) {
+			if ( ! base.hasOwnProperty( k ) ) {
+				continue;
+			}
+			if ( typeof got[ k ] === 'undefined' ) {
+				got[ k ] = base[ k ];
+			}
+		}
+		return got;
+	}
+
+	/**
+	 * Показать всплывающее уведомление (toast).
+	 *
+	 * @param {string} message Текст.
+	 * @param {string} kind    added | removed | cleared | limit.
+	 */
+	function toast( message, kind ) {
 		if ( ! message ) {
+			// Пустое сообщение = не показывать (R4-04).
 			return;
 		}
+		kind = kind || 'added';
+		var cfg = toastCfg( kind );
+
 		var node = document.createElement( 'div' );
 		node.className = 'rvn-compare-toast';
+		node.setAttribute( 'data-kind', kind );
 		node.setAttribute( 'role', 'status' );
-		node.textContent = message;
-		if ( CFG.accent ) {
-			node.style.borderLeftColor = CFG.accent;
+
+		// Позиция (десктоп vs мобайл) через data-атрибуты, CSS применяет.
+		node.setAttribute( 'data-position', cfg.positionDesktop );
+		node.setAttribute( 'data-position-mobile', cfg.positionMobile );
+
+		if ( cfg.icon ) {
+			var icon = document.createElement( 'span' );
+			icon.className = 'rvn-compare-toast__icon rvn-compare-toast__icon--' + cfg.iconPosition;
+			icon.innerHTML = cfg.icon; // SVG из санитайзера на сервере.
+			node.appendChild( icon );
 		}
+
+		var text = document.createElement( 'span' );
+		text.className = 'rvn-compare-toast__text';
+		text.textContent = message;
+		node.appendChild( text );
+
+		var bar = null;
+		if ( cfg.progress ) {
+			bar = document.createElement( 'span' );
+			bar.className = 'rvn-compare-toast__bar';
+			node.appendChild( bar );
+		}
+
 		document.body.appendChild( node );
 
 		// Принудительный reflow для проигрывания анимации появления.
@@ -122,6 +173,9 @@
 		node.classList.add( 'is-visible' );
 
 		var hideMs = parseInt( CFG.toastMs, 10 ) || 3200;
+		if ( bar ) {
+			bar.style.animationDuration = hideMs + 'ms';
+		}
 		window.setTimeout( function () {
 			node.classList.remove( 'is-visible' );
 			window.setTimeout( function () {
@@ -171,7 +225,7 @@
 			next = next.filter( function ( x ) { return x !== id; } );
 		} else {
 			if ( CFG.limits && CFG.limits.total && next.length >= CFG.limits.total ) {
-				toast( CFG.i18n && CFG.i18n.limit ? CFG.i18n.limit : 'Достигнут максимум товаров в сравнении' );
+				toast( CFG.i18n && CFG.i18n.limit ? CFG.i18n.limit : 'Достигнут максимум товаров в сравнении', 'limit' );
 				return;
 			}
 			next.push( id );
@@ -183,7 +237,7 @@
 					var data = res && res.data ? res.data : {};
 					writeLS( data.items || next, meta );
 					refreshUI();
-					toast( added ? ( CFG.i18n.removed || '' ) : ( data.reason === 'limit' ? ( CFG.i18n.limit || '' ) : ( CFG.i18n.added || '' ) ) );
+					toast( added ? ( CFG.i18n.removed || '' ) : ( data.reason === 'limit' ? ( CFG.i18n.limit || '' ) : ( CFG.i18n.added || '' ) ), data.reason === 'limit' ? 'limit' : ( added ? 'removed' : 'added' ) );
 				} )
 				.catch( function () {
 					// Откат при ошибке сети.
@@ -193,7 +247,7 @@
 		} else {
 			writeLS( next, meta );
 			refreshUI();
-			toast( added ? ( CFG.i18n.removed || '' ) : ( CFG.i18n.added || '' ) );
+			toast( added ? ( CFG.i18n.removed || '' ) : ( CFG.i18n.added || '' ), added ? 'removed' : 'added' );
 		}
 	}
 
@@ -211,14 +265,14 @@
 				var data = res && res.data ? res.data : {};
 				writeLS( data.items || [], meta );
 				refreshUI();
-				toast( CFG.i18n.cleared || '' );
+				toast( CFG.i18n.cleared || '', 'cleared' );
 			} ).catch( function () {
 				refreshUI();
 			} );
 		} else {
 			writeLS( [], meta );
 			refreshUI();
-			toast( CFG.i18n.cleared || '' );
+			toast( CFG.i18n.cleared || '', 'cleared' );
 		}
 	}
 

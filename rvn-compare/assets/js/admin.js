@@ -158,6 +158,94 @@
 		refreshPreview();
 	}
 
+	/**
+	 * Живой предпросмотр вкладки «Дизайн элементов и кнопок».
+	 *
+	 * Рисует внутренности кнопок/тостов-preview из значений формы es[...],
+	 * в том числе SVG-иконку, режим, тексты, позицию бейджа и hover.
+	 *
+	 * @param {Element} root Контейнер .rvn-compare-elems.
+	 */
+	function refreshElementsPreview( root ) {
+		var stage = root.querySelector( '[data-rvn-compare-stage]' );
+		if ( ! stage ) {
+			return;
+		}
+
+		function val( selector, fallback ) {
+			var el = root.closest( 'form' ) ? root.closest( 'form' ).querySelector( selector ) : null;
+			el = el || document.querySelector( selector );
+			return el && el.value !== undefined ? el.value : fallback;
+		}
+
+		// Кнопка «Сравнить» и её режим.
+		var btn = stage.querySelector( '.rvn-compare-button' );
+		var compareMode = val( 'select[name="es[compare][mode]"]', 'icon_text' );
+		var compareSvg = val( 'textarea[name="es[compare][svg]"]', '' );
+		var btnText = val( 'input[name="button_text"]', 'Сравнить' );
+		if ( btn ) {
+			var icon1 = '';
+			if ( compareMode === 'icon_text' || compareMode === 'text_icon' || compareMode === 'icon' ) {
+				icon1 = '<span class="rvn-compare-button__icon">' + compareSvg + '</span>';
+			}
+			var label1 = ( compareMode === 'icon' || compareMode === 'hidden' ) ? '' : '<span class="rvn-compare-button__label">' + escapeHtml( btnText ) + '</span>';
+			btn.className = 'rvn-compare-button rvn-compare-button--' + compareMode;
+			if ( compareMode === 'text_icon' ) {
+				btn.innerHTML = label1 + icon1;
+			} else {
+				btn.innerHTML = icon1 + label1;
+			}
+			if ( compareMode === 'hidden' ) {
+				btn.style.display = 'none';
+			} else {
+				btn.style.display = '';
+			}
+		}
+
+		// Кнопка-счётчик.
+		var cnt = stage.querySelector( '.rvn-compare-counter-button' );
+		var cntMode = val( 'select[name="es[counter][mode]"]', 'icon_text' );
+		var cntSvg = val( 'textarea[name="es[counter][svg]"]', '' );
+		var cntText = val( 'input[name="counter_button_text"]', 'Сравнение' );
+		var badgePos = val( 'select[name="es[counter][badge_position]"]', 'right' );
+		if ( cnt ) {
+			var icon2 = ( cntMode === 'icon_text' || cntMode === 'text_icon' || cntMode === 'icon' )
+				? '<span class="rvn-compare-button__icon">' + cntSvg + '</span>'
+				: '';
+			var label2 = ( cntMode === 'icon' || cntMode === 'hidden' ) ? '' : '<span class="rvn-compare-counter-button__label">' + escapeHtml( cntText ) + '</span>';
+			var badge2 = '<span class="rvn-compare-counter-button__badge rvn-compare-counter-button__badge--' + badgePos + '">2</span>';
+			cnt.className = 'rvn-compare-counter-button rvn-compare-button--' + cntMode;
+			if ( cntMode === 'hidden' ) {
+				cnt.style.display = 'none';
+			} else {
+				cnt.style.display = '';
+				cnt.innerHTML = ( badgePos !== 'left' )
+					? ( cntMode === 'text_icon' ? label2 + icon2 : icon2 + label2 ) + badge2
+					: badge2 + ( cntMode === 'text_icon' ? label2 + icon2 : icon2 + label2 );
+			}
+		}
+	}
+
+	function escapeHtml( str ) {
+		return String( str ).replace( /[&<>"']/g, function ( ch ) {
+			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ ch ];
+		} );
+	}
+
+	/**
+	 * Кнопка «Обновить предпросмотр» — ручной вызов перерисовки.
+	 */
+	function bindElementsPreview( root ) {
+		var btn = root.querySelector( '[data-rvn-compare-preview-refresh]' );
+		if ( btn ) {
+			btn.addEventListener( 'click', function () {
+				refreshElementsPreview( root );
+			} );
+		}
+		// Первичная отрисовка.
+		refreshElementsPreview( root );
+	}
+
 	function init() {
 		// Color picker на полях с классом .rvn-compare-color.
 		var fields = document.querySelectorAll( '.rvn-compare-color' );
@@ -170,6 +258,11 @@
 		var design = document.querySelector( '.rvn-compare-design' );
 		if ( design ) {
 			initDesign( design );
+		}
+
+		var elems = document.querySelector( '.rvn-compare-elems' );
+		if ( elems ) {
+			bindElementsPreview( elems );
 		}
 	}
 

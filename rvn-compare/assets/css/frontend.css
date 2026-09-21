@@ -95,6 +95,30 @@
 	font-weight: 700;
 }
 
+/* Позиции бейджа счётчика (§6.4). */
+.rvn-compare-counter-button__badge--left {
+	order: -1;
+}
+
+.rvn-compare-counter-button__badge--top {
+	position: absolute;
+	top: -0.6em;
+	right: -0.6em;
+	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.2 );
+}
+
+/* Иконка внутри кнопок. */
+.rvn-compare-button__icon {
+	display: inline-flex;
+	align-items: center;
+	line-height: 0;
+}
+
+.rvn-compare-button__icon svg {
+	width: 16px;
+	height: 16px;
+}
+
 /* Простой счётчик */
 .rvn-compare-counter {
 	display: inline-flex;
@@ -175,6 +199,9 @@
 	left: 50%;
 	bottom: 24px;
 	transform: translate(-50%, 16px);
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
 	background: var(--rvn-compare-surface);
 	color: var(--rvn-compare-text);
 	border: 1px solid var(--rvn-compare-border);
@@ -187,11 +214,68 @@
 	transition: opacity 260ms ease, transform 260ms ease;
 	z-index: 999999;
 	max-width: calc( 100vw - 32px );
+	overflow: hidden;
 }
 
 .rvn-compare-toast.is-visible {
 	opacity: 1;
 	transform: translate(-50%, 0);
+}
+
+/* Позиции тостов по data-position (см. §6.4). */
+.rvn-compare-toast[data-position="top-left"],      .rvn-compare-toast[data-position-mobile="top-left"] { top: 24px; bottom: auto; }
+.rvn-compare-toast[data-position="top-center"],    .rvn-compare-toast[data-position-mobile="top-center"] { top: 24px; bottom: auto; }
+.rvn-compare-toast[data-position="top-right"],     .rvn-compare-toast[data-position-mobile="top-right"] { top: 24px; bottom: auto; }
+.rvn-compare-toast[data-position="bottom-left"],   .rvn-compare-toast[data-position-mobile="bottom-left"] { bottom: 24px; top: auto; }
+.rvn-compare-toast[data-position="bottom-center"], .rvn-compare-toast[data-position-mobile="bottom-center"] { bottom: 24px; top: auto; }
+.rvn-compare-toast[data-position="bottom-right"],  .rvn-compare-toast[data-position-mobile="bottom-right"] { bottom: 24px; top: auto; }
+
+.rvn-compare-toast__icon {
+	display: inline-flex;
+	flex: 0 0 auto;
+	line-height: 0;
+}
+
+.rvn-compare-toast__icon svg {
+	display: block;
+	width: 16px;
+	height: 16px;
+}
+
+.rvn-compare-toast__icon--right {
+	order: 2;
+}
+
+.rvn-compare-toast__text {
+	min-width: 0;
+}
+
+/* Прогресс-бар времени (ширина анимации JS-ом). */
+.rvn-compare-toast__bar {
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 2px;
+	width: 100%;
+	background: var(--rvn-compare-accent);
+	transform-origin: left center;
+	pointer-events: none;
+}
+
+.rvn-compare-toast.is-visible .rvn-compare-toast__bar {
+	animation: rvn-compare-toastbar linear forwards;
+}
+@keyframes rvn-compare-toastbar {
+	from { transform: scaleX(1); }
+	to   { transform: scaleX(0); }
+}
+
+@media ( max-width: 768px ) {
+	/* Мобильные позиции, если заданы, то перекрывают десктопные. */
+	.rvn-compare-toast[data-position-mobile="top-left"] { left: 16px; right: auto; transform: translate(0, 16px); }
+	.rvn-compare-toast[data-position-mobile="top-right"] { left: auto; right: 16px; transform: translate(0, 16px); }
+	.rvn-compare-toast[data-position-mobile="bottom-left"] { left: 16px; right: auto; transform: translate(0, 16px); bottom: 24px; }
+	.rvn-compare-toast[data-position-mobile="bottom-right"] { left: auto; right: 16px; transform: translate(0, 16px); bottom: 24px; }
 }
 
 /* ===== Полноценная таблица сравнения ===== */

@@ -128,17 +128,23 @@ final class RVN_Compare_Shortcodes {
 		);
 
 		$settings = RVN_Compare_Settings::instance();
-		$text     = (string) $settings->get( 'counter_button_text', __( 'Сравнение', 'rvn-compare' ) );
-		$url      = $atts['url'] ? $atts['url'] : (string) get_permalink( (int) $settings->get( 'compare_page_id', '' ) );
+		$design   = RVN_Compare_Design::instance();
+		$cfg      = $design->buttons();
+		$counter  = isset( $cfg['counter'] ) ? $cfg['counter'] : array();
+		$mode     = isset( $counter['mode'] ) ? $counter['mode'] : 'icon_text';
 		$badge    = '1' === (string) $atts['badge'];
-		$class    = trim( 'rvn-compare-counter-button ' . $atts['class'] );
-		$linked   = '0' !== (string) $atts['link'];
 
-		$badge_html = $badge
-			? '<span class="rvn-compare-counter-button__badge" data-rvn-compare-count>0</span>'
-			: '';
+		$text   = (string) $settings->get( 'counter_button_text', __( 'Сравнение', 'rvn-compare' ) );
+		$url    = $atts['url'] ? $atts['url'] : (string) get_permalink( (int) $settings->get( 'compare_page_id', '' ) );
+		$linked = '0' !== (string) $atts['link'];
 
-		$inner = '<span class="rvn-compare-counter-button__label">' . esc_html( $text ) . '</span>' . $badge_html;
+		$extra = trim( $atts['class'] );
+		$class = trim( 'rvn-compare-counter-button rvn-compare-button--' . $mode . ' ' . $extra );
+		if ( isset( $counter['class'] ) && $counter['class'] ) {
+			$class .= ' ' . $counter['class'];
+		}
+
+		$inner = $badge ? $design->counter_inner_html( $text, '0' ) : $design->button_inner_html( 'counter', $text );
 
 		if ( $linked && $url ) {
 			return '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . $inner . '</a>';
@@ -179,15 +185,16 @@ final class RVN_Compare_Shortcodes {
 			return '';
 		}
 
-		$settings = RVN_Compare_Settings::instance();
-		$class    = trim( 'rvn-compare-button ' . $atts['class'] );
+		$design = RVN_Compare_Design::instance();
+		$cfg    = $design->buttons();
+		$mode   = isset( $cfg['compare']['mode'] ) ? $cfg['compare']['mode'] : 'icon_text';
+		$class  = trim( 'rvn-compare-button rvn-compare-button--' . $mode . ' ' . $atts['class'] );
 
 		return sprintf(
-			'<button type="button" class="%1$s" data-rvn-compare-add="%2$d" data-rvn-compare-state="">' .
-			'<span class="rvn-compare-button__label">%3$s</span></button>',
+			'<button type="button" class="%1$s" data-rvn-compare-add="%2$d" data-rvn-compare-state="">%3$s</button>',
 			esc_attr( $class ),
 			esc_attr( $id ),
-			esc_html( (string) $settings->get( 'button_text', __( 'Сравнить', 'rvn-compare' ) ) )
+			$design->button_inner_html( 'compare', (string) RVN_Compare_Settings::instance()->get( 'button_text', __( 'Сравнить', 'rvn-compare' ) ) ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- SVG санитизирован, текст esc_html.
 		);
 	}
 

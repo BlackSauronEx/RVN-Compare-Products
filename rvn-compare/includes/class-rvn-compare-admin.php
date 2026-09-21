@@ -723,13 +723,276 @@ final class RVN_Compare_Admin {
 	 * @return void
 	 */
 	private function render_elements_tab( $all ) {
-		echo '<p>' . esc_html__( 'Конструктор кнопок и тостов — в Этапе 2 (см. живое ТЗ §6.4). Базовые тексты кнопок настраиваются ниже.', 'rvn-compare' ) . '</p>';
+		$design  = RVN_Compare_Design::instance();
+		$buttons = $design->buttons();
+		$toasts  = $design->toasts();
 
+		// ----- Тексты кнопок и тостов (§6.4, R4-04) -----
+		echo '<h2 class="title">' . esc_html__( 'Тексты', 'rvn-compare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation"><tbody>';
-		$this->text_field( $all, 'button_text', __( 'Текст кнопки «Сравнить»', 'rvn-compare' ) );
+		$this->text_field( $all, 'button_text', __( 'Текст кнопки «Сравнить»', 'rvn-compare' ), __( 'Пустое значение подставит переведённый дефолт.', 'rvn-compare' ) );
 		$this->text_field( $all, 'button_added_text', __( 'Текст кнопки «Уже в сравнении»', 'rvn-compare' ) );
 		$this->text_field( $all, 'counter_button_text', __( 'Текст кнопки-счётчика', 'rvn-compare' ) );
+		$this->text_field( $all, 'clear_confirm_text', __( 'Текст подтверждения очистки', 'rvn-compare' ) );
+		$this->text_field( $all, 'toast_added_text', __( 'Тост «добавлен»', 'rvn-compare' ) );
+		$this->text_field( $all, 'toast_removed_text', __( 'Тост «удалён»', 'rvn-compare' ) );
+		$this->text_field( $all, 'toast_cleared_text', __( 'Тост «очищен»', 'rvn-compare' ) );
+		$this->text_field( $all, 'toast_limit_text', __( 'Тост «достигнут лимит»', 'rvn-compare' ) );
 		echo '</tbody></table>';
+
+		// ----- Кнопки -----
+		echo '<h2 class="title">' . esc_html__( 'Кнопки', 'rvn-compare' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Три кнопки плагина: настройте режим, иконку и стили (normal/hover).', 'rvn-compare' ) . '</p>';
+
+		$button_defs = array(
+			'compare' => array( __( 'Кнопка «Сравнить»', 'rvn-compare' ), 'button_text' ),
+			'added'   => array( __( 'Кнопка «Уже в сравнении»', 'rvn-compare' ), 'button_added_text' ),
+			'counter' => array( __( 'Кнопка-счётчик меню', 'rvn-compare' ), 'counter_button_text' ),
+		);
+
+		foreach ( $button_defs as $key => $meta ) {
+			$cfg = isset( $buttons[ $key ] ) ? $buttons[ $key ] : array();
+			$this->render_button_block( $key, $meta[0], $meta[1], $cfg, $all );
+		}
+
+		// ----- Тосты -----
+		echo '<h2 class="title">' . esc_html__( 'Тосты', 'rvn-compare' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Четыре уведомления: позиция (десктоп и мобайл отдельно), значок и стили. Пустой текст + значок = не показывать.', 'rvn-compare' ) . '</p>';
+
+		$toast_defs = array(
+			'added'   => __( 'Тост «добавлен»', 'rvn-compare' ),
+			'removed' => __( 'Тост «удалён»', 'rvn-compare' ),
+			'cleared' => __( 'Тост «очищен»', 'rvn-compare' ),
+			'limit'   => __( 'Тост «лимит»', 'rvn-compare' ),
+		);
+
+		foreach ( $toast_defs as $key => $label ) {
+			$cfg = isset( $toasts[ $key ] ) ? $toasts[ $key ] : array();
+			$this->render_toast_block( $key, $label, $cfg );
+		}
+
+		// ----- Превью на полосатой подложке -----
+		echo '<div class="rvn-compare-elems" data-rvn-compare-elems-preview>';
+		echo '<h2 class="title">' . esc_html__( 'Предпросмотр', 'rvn-compare' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Наведите курсор на кнопку, чтобы увидеть hover-состояние.', 'rvn-compare' ) . '</p>';
+		echo '<div class="rvn-compare-elems__stage" data-rvn-compare-stage>' . "
+";
+		printf(
+			'<button type="button" class="rvn-compare-button rvn-compare-button--icon_text" data-rvn-compare-add="0">%s<span class="rvn-compare-button__label">%s</span></button>',
+			'',
+			esc_html( (string) $this->setting_value( $all, 'button_text', __( 'Сравнить', 'rvn-compare' ) ) )
+		);
+		printf(
+			'<a class="rvn-compare-counter-button"><span class="rvn-compare-counter-button__badge">2</span><span class="rvn-compare-counter-button__label">%s</span></a>',
+			esc_html( (string) $this->setting_value( $all, 'counter_button_text', __( 'Сравнение', 'rvn-compare' ) ) )
+		);
+		echo '<div class="rvn-compare-toast rvn-compare-toast--demo is-visible" data-kind="added">' . esc_html__( 'Товар добавлен в список сравнения', 'rvn-compare' ) . '<span class="rvn-compare-toast__bar"></span></div>';
+		echo '</div></div>';
+		echo '<button type="button" class="button" data-rvn-compare-preview-refresh>'
+			. esc_html__( 'Обновить предпросмотр', 'rvn-compare' )
+			. '</button>';
+
+		// Исходные стили превью (сохранённые) + JS-пересчёт по форме.
+		echo '<style id="rvn-compare-elements-css">' . $design->elements_css() . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * Печатает карточку-конструктор одной кнопки.
+	 *
+	 * @param string $key   'compare' | 'added' | 'counter'.
+	 * @param string $title Заголовок блока.
+	 * @param string $text_key Ключ текста (button_*_text).
+	 * @param array  $cfg   Конфигурация кнопки.
+	 * @param array  $all   Все настройки.
+	 * @return void
+	 */
+	private function render_button_block( $key, $title, $text_key, $cfg, $all ) {
+		$v = function ( $path, $def = '' ) use ( $cfg ) {
+			$cur = $cfg;
+			foreach ( $path as $p ) {
+				if ( ! is_array( $cur ) || ! isset( $cur[ $p ] ) ) {
+					return $def;
+				}
+				$cur = $cur[ $p ];
+			}
+			return ( '' !== (string) $cur ) ? $cur : $def;
+		};
+
+		echo '<div class="rvn-compare-el-block" data-el-block="' . esc_attr( $key ) . '">';
+		echo '<h3>' . esc_html( $title ) . '</h3>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		// Текст (уже вверху) + режим.
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Режим', 'rvn-compare' ) . '</label></th><td>';
+		echo '<select name="' . esc_attr( 'es[' . $key . '][mode]' ) . '">';
+		$modes = array(
+			'icon_text' => __( 'Иконка + текст', 'rvn-compare' ),
+			'text_icon' => __( 'Текст + иконка', 'rvn-compare' ),
+			'icon'      => __( 'Только иконка', 'rvn-compare' ),
+			'text'      => __( 'Только текст', 'rvn-compare' ),
+			'bare'      => __( 'Ссылка (без фона)', 'rvn-compare' ),
+			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
+		);
+		foreach ( $modes as $mk => $ml ) {
+			printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $mk ), selected( $v( array( 'mode' ), 'icon_text' ), $mk, false ), esc_html( $ml ) );
+		}
+		echo '</select>';
+		echo '</td></tr>';
+
+		// Иконка (textarea).
+		$svg = $v( array( 'svg' ), '' );
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Иконка (SVG / эмодзи)', 'rvn-compare' ) . '</label></th><td>';
+		echo '<textarea name="' . esc_attr( 'es[' . $key . '][svg]' ) . '" rows="3" class="large-text code">' . esc_textarea( $svg ) . '</textarea>';
+		echo '<p class="description">' . esc_html__( 'SVG очищается санитайзером (whitelist); короткий эмодзи тоже допустим. Пусто — без иконки.', 'rvn-compare' ) . '</p>';
+		echo '</td></tr>';
+
+		// Позиция бейджа (только счётчик).
+		if ( 'counter' === $key ) {
+			echo '<tr><th scope="row"><label>' . esc_html__( 'Позиция бейджа', 'rvn-compare' ) . '</label></th><td>';
+			echo '<select name="' . esc_attr( 'es[' . $key . '][badge_position]' ) . '">';
+			$bp = array(
+				'right' => __( 'Справа', 'rvn-compare' ),
+				'left'  => __( 'Слева', 'rvn-compare' ),
+				'top'   => __( 'Сверху (угол)', 'rvn-compare' ),
+			);
+			foreach ( $bp as $bpk => $bpl ) {
+				printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $bpk ), selected( $v( array( 'badge_position' ), 'right' ), $bpk, false ), esc_html( $bpl ) );
+			}
+			echo '</select></td></tr>';
+		}
+
+		// Свой класс.
+		$cls = $v( array( 'class' ), '' );
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Свой CSS-класс', 'rvn-compare' ) . '</label></th><td>';
+		echo '<input type="text" name="' . esc_attr( 'es[' . $key . '][class]' ) . '" value="' . esc_attr( $cls ) . '" class="regular-text" />';
+		echo '</td></tr>';
+
+		// Стили.
+		$this->render_style_group( $key, 'normal', __( 'Обычное состояние', 'rvn-compare' ), $v, array( 'bg', 'color', 'border', 'border_width', 'radius', 'font_size', 'font_weight', 'padding' ) );
+		$this->render_style_group( $key, 'hover', __( 'Hover', 'rvn-compare' ), $v, array( 'bg', 'color', 'border' ) );
+
+		echo '</tbody></table>';
+		echo '</div>';
+	}
+
+	/**
+	 * Печатает блок «Стили (normal|hover)» конструктора кнопки.
+	 *
+	 * @param string   $key    Ключ кнопки.
+	 * @param string   $state  normal|hover.
+	 * @param string   $title  Заголовок.
+	 * @param callable $v      Читатель значения из конфига.
+	 * @param array    $fields Поля.
+	 * @return void
+	 */
+	private function render_style_group( $key, $state, $title, $v, $fields ) {
+		echo '<tr><th scope="row">' . esc_html( $title ) . '</th><td><div class="rvn-compare-el-styles">';
+		$color_fields = array( 'bg', 'color', 'border' );
+		$labels = array(
+			'bg'           => __( 'Фон', 'rvn-compare' ),
+			'color'        => __( 'Текст', 'rvn-compare' ),
+			'border'       => __( 'Рамка', 'rvn-compare' ),
+			'border_width' => __( 'Толщина, px', 'rvn-compare' ),
+			'radius'       => __( 'Радиус, px', 'rvn-compare' ),
+			'font_size'    => __( 'Размер, px', 'rvn-compare' ),
+			'font_weight'  => __( 'Насыщенность', 'rvn-compare' ),
+			'padding'      => __( 'Паддинг', 'rvn-compare' ),
+		);
+		foreach ( $fields as $f ) {
+			$val = $v( array( $state, $f ), '' );
+			$name = 'es[' . $key . '][' . $state . '][' . $f . ']';
+			echo '<label class="rvn-compare-el-style">' . esc_html( $labels[ $f ] ) . ' ';
+			if ( in_array( $f, $color_fields, true ) ) {
+				printf( '<input type="text" name="%1$s" value="%2$s" class="rvn-compare-color" data-default-color="%2$s" />', esc_attr( $name ), esc_attr( $val ) );
+			} else {
+				printf( '<input type="text" name="%1$s" value="%2$s" class="small-text" />', esc_attr( $name ), esc_attr( $val ) );
+			}
+			echo '</label>';
+		}
+		echo '</div></td></tr>';
+	}
+
+	/**
+	 * Печатает карточку-конструктор тоста.
+	 *
+	 * @param string $key   added|removed|cleared|limit.
+	 * @param string $title Заголовок.
+	 * @param array  $cfg   Конфигурация тоста.
+	 * @return void
+	 */
+	private function render_toast_block( $key, $title, $cfg ) {
+		$design = RVN_Compare_Design::instance();
+
+		$get = function ( $field ) use ( $cfg ) {
+			return isset( $cfg[ $field ] ) ? $cfg[ $field ] : '';
+		};
+
+		echo '<div class="rvn-compare-el-block" data-el-block="toast-' . esc_attr( $key ) . '">';
+		echo '<h3>' . esc_html( $title ) . '</h3>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		// Позиции.
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Позиция (десктоп)', 'rvn-compare' ) . '</label></th><td>';
+		$this->position_select( 'es[' . $key . '][toast][position_desktop]', $get( 'position_desktop' ), $design->toast_positions() );
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Позиция (мобайл)', 'rvn-compare' ) . '</label></th><td>';
+		$this->position_select( 'es[' . $key . '][toast][position_mobile]', $get( 'position_mobile' ), $design->toast_positions() );
+		echo '</td></tr>';
+
+		// Значок.
+		$icon = $get( 'icon' );
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Значок (SVG / эмодзи)', 'rvn-compare' ) . '</label></th><td>';
+		echo '<textarea name="' . esc_attr( 'es[' . $key . '][toast][icon]' ) . '" rows="2" class="large-text code">' . esc_textarea( $icon ) . '</textarea>';
+		echo '</td></tr>';
+
+		// Позиция значка.
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Позиция значка', 'rvn-compare' ) . '</label></th><td>';
+		echo '<select name="' . esc_attr( 'es[' . $key . '][toast][icon_position]' ) . '">';
+		foreach ( array( 'left' => __( 'Слева', 'rvn-compare' ), 'right' => __( 'Справа', 'rvn-compare' ) ) as $ik => $il ) {
+			printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $ik ), selected( $get( 'icon_position' ), $ik, false ), esc_html( $il ) );
+		}
+		echo '</select></td></tr>';
+
+		// Прогресс.
+		echo '<tr><th scope="row">' . esc_html__( 'Прогресс-бар', 'rvn-compare' ) . '</th><td>';
+		printf( '<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>', esc_attr( 'es[' . $key . '][toast][progress]' ), checked( (string) $get( 'progress' ), '1', false ), esc_html__( 'Включено', 'rvn-compare' ) );
+		echo '</td></tr>';
+
+		// Цвета.
+		foreach ( array( 'bg' => __( 'Фон', 'rvn-compare' ), 'color' => __( 'Текст', 'rvn-compare' ), 'border' => __( 'Рамка', 'rvn-compare' ), 'accent' => __( 'Акцент (полоса)', 'rvn-compare' ) ) as $fk => $fl ) {
+			$val = $get( $fk );
+			echo '<tr><th scope="row"><label>' . esc_html( $fl ) . '</label></th><td>';
+			printf( '<input type="text" name="%1$s" value="%2$s" class="rvn-compare-color" data-default-color="%2$s" />', esc_attr( 'es[' . $key . '][toast][' . $fk . ']' ), esc_attr( $val ) );
+			echo '</td></tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '</div>';
+	}
+
+	/**
+	 * Селект позиции тоста.
+	 *
+	 * @param string   $name    Имя поля.
+	 * @param string   $current Текущее.
+	 * @param string[] $options Список позиций.
+	 * @return void
+	 */
+	private function position_select( $name, $current, $options ) {
+		$labels = array(
+			'top-left'      => __( 'Верх слева', 'rvn-compare' ),
+			'top-center'    => __( 'Верх центр', 'rvn-compare' ),
+			'top-right'     => __( 'Верх справа', 'rvn-compare' ),
+			'bottom-left'   => __( 'Низ слева', 'rvn-compare' ),
+			'bottom-center' => __( 'Низ центр', 'rvn-compare' ),
+			'bottom-right'  => __( 'Низ справа', 'rvn-compare' ),
+		);
+		echo '<select name="' . esc_attr( $name ) . '">';
+		foreach ( $options as $o ) {
+			printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $o ), selected( $current, $o, false ), esc_html( isset( $labels[ $o ] ) ? $labels[ $o ] : $o ) );
+		}
+		echo '</select>';
 	}
 
 	/**
@@ -796,6 +1059,10 @@ final class RVN_Compare_Admin {
 			$msg = 'saved';
 		} elseif ( 'design' === $tab ) {
 			// Вкладка «Дизайн таблицы»: плоские ключи design[секция][поле].
+			$settings->save_from_request( wp_unslash( $_POST ) );
+			$msg = 'saved';
+		} elseif ( 'elements' === $tab ) {
+			// Вкладка «Дизайн элементов и кнопок»: тексты + es[...]-стили.
 			$settings->save_from_request( wp_unslash( $_POST ) );
 			$msg = 'saved';
 		} elseif ( 'general' === $tab && isset( $_POST['rvn_compare_action'] ) ) {
