@@ -348,13 +348,28 @@ final class RVN_Compare_Rest {
 			);
 		}
 
+		// Рендер активной вкладки (или первой доступной).
+		$resolver = RVN_Compare_Categories::instance();
+		if ( ! $tab && ! empty( $ids ) ) {
+			$all_tabs = $resolver->build_tabs( $ids );
+			if ( ! empty( $all_tabs ) ) {
+				$tab = array_keys( $all_tabs )[0];
+			}
+		}
+
+		$tab_ids = array_values( array_filter( $ids, function ( $product_id ) use ( $resolver, $tab ) {
+			return in_array( $tab, $resolver->product_context_keys( $product_id ), true );
+		} ) );
+
+		$html = RVN_Compare_Table::instance()->render_tab_html( $tab_ids, $tab );
+
 		return rest_ensure_response(
 			array(
 				'success' => true,
 				'data'    => array(
-					'html' => '<div class="rvn-compare-table rvn-compare-table--' . esc_attr( $tab ? $tab : 'default' ) . '"></div>',
-					'ids'  => $ids,
+					'html' => $html,
 					'tab'  => $tab,
+					'ids'  => $tab_ids,
 				),
 			)
 		);

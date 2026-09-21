@@ -247,6 +247,124 @@
 	}
 
 	/**
+	 * Подгружает HTML вкладки таблицы по REST (/table).
+	 */
+	function fetchTabHTML( tab ) {
+		var ids = items.map( function ( id ) { return Number( id ); } ).join( ',' );
+		var url = CFG.restUrl + 'table?tab=' + encodeURIComponent( tab || '' ) + '&ids=' + encodeURIComponent( ids );
+
+		return window.fetch( url, {
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': CFG.nonce || '' }
+		} ).then( function ( r ) { return r.json(); } ).then( function ( json ) {
+			if ( ! json || ! json.success ) {
+				throw new Error( 'table request failed' );
+			}
+			return json.data || {};
+		} );
+	}
+
+	/**
+	 * Привязывает интерактив таблицы: вкладки, «Только различия», группы.
+	 */
+	function initTable( scope ) {
+		var table = scope && scope.querySelector ? scope.querySelector( '.rvn-compare-table' ) : null;
+		if ( ! table ) {
+			return;
+		}
+
+		// Переключение вкладок.
+		var tabsWrap = table.querySelector( '[data-rvn-compare-tabs]' );
+		var viewport = table.querySelector( '[data-rvn-compare-viewport]' );
+
+		if ( tabsWrap ) {
+			tabsWrap.addEventListener( 'click', function ( e ) {
+				var btn = e.target && e.target.closest ? e.target.closest( '[data-rvn-compare-tab]' ) : null;
+				if ( ! btn ) {
+					return;
+				}
+
+				var tab = btn.getAttribute( 'data-rvn-compare-tab' );
+				var all = tabsWrap.querySelectorAll( '[data-rvn-compare-tab]' );
+				for ( var i = 0; i < all.length; i++ ) {
+					all[ i ].classList.toggle( 'is-active', all[ i ] === btn );
+				}
+
+				if ( ! viewport ) {
+					return;
+				}
+				viewport.classList.add( 'is-loading' );
+				fetchTabHTML( tab ).then( function ( data ) {
+					viewport.innerHTML = data.html || '';
+					viewport.classList.remove( 'is-loading' );
+					initTable( viewport );
+				} ).catch( function () {
+					viewport.classList.remove( 'is-loading' );
+				} );
+			} );
+		}
+
+		// Переключатель «Только различия».
+		var diff = table.querySelector( '[data-rvn-compare-only-diff]' );
+		if ( diff ) {
+			var applyDiff = function () {
+				var rows = table.querySelectorAll( '[data-rvn-compare-row]' );
+				for ( var r = 0; r < rows.length; r++ ) {
+					if ( diff.checked ) {
+						rows[ r ].style.display = rows[ r ].classList.contains( 'has-diff' ) ? '' : 'none';
+					} else {
+						rows[ r ].style.display = '';
+					}
+				}
+			};
+			diff.addEventListener( 'change', applyDiff );
+			applyDiff();
+		}
+
+		// Сворачивание групп.
+		var groups = table.querySelectorAll( '[data-rvn-compare-group]' );
+		for ( var g = 0; g < groups.length; g++ ) {
+			( function ( group ) {
+				var head = group.querySelector( '[data-rvn-compare-group-toggle]' );
+				if ( head ) {
+					head.addEventListener( 'click', function () {
+						group.classList.toggle( 'is-collapsed' );
+					} );
+				}
+			} )( groups[ g ] );
+		}
+	}
+
+	/**
+	 * Ре-рендер таблицы после изменения списка (удаление/добавление).
+	 */
+	function onListUpdated() {
+		var table = document.querySelector( '.rvn-compare-table' );
+		if ( ! table ) {
+			return;
+		}
+
+		var tabsWrap = table.querySelector( '[data-rvn-compare-tabs]' );
+		var activeBtn = tabsWrap ? tabsWrap.querySelector( '[data-rvn-compare-tab].is-active' ) : null;
+		var tab = activeBtn ? activeBtn.getAttribute( 'data-rvn-compare-tab' ) : ( table.getAttribute( 'data-active' ) || '' );
+		var viewport = table.querySelector( '[data-rvn-compare-viewport]' );
+
+		if ( viewport ) {
+			viewport.classList.add( 'is-loading' );
+		}
+		fetchTabHTML( tab ).then( function ( data ) {
+			if ( ! viewport ) { return; }
+			viewport.innerHTML = data.html || '';
+			viewport.classList.remove( 'is-loading' );
+			initTable( viewport );
+		} ).catch( function () {
+			if ( viewport ) {
+				viewport.classList.remove( 'is-loading' );
+			}
+		} );
+	}
+
+	/**
 	 * Инициализация фронтенда.
 	 */
 	function init() {
@@ -301,6 +419,10 @@
 				refreshUI();
 			}
 		} );
+
+		// Таблица сравнения: вкладки, «Только различия», группы, ре-рендер.
+		initTable( document );
+		window.addEventListener( 'rvn_compare:list_updated', onListUpdated );
 	}
 
 	// Публичный неймспейс.
