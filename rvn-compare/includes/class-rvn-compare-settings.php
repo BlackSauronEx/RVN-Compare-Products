@@ -166,10 +166,20 @@ final class RVN_Compare_Settings {
 	 */
 	public function save_from_request( $raw ) {
 		$current   = $this->all();
-		$sanitized = array();
+		$sanitized = $current;
+
+		$tab = isset( $raw['tab'] ) ? sanitize_key( (string) $raw['tab'] ) : 'general';
+		$keys_by_tab = $this->keys_by_tab();
 
 		/*
-		 * Числовые ключи — неотрицательные целые.
+		 * Неизвестная вкладка (или вкладка без полей) — ничего не меняем.
+		 */
+		if ( ! isset( $keys_by_tab[ $tab ] ) || empty( $keys_by_tab[ $tab ] ) ) {
+			return $current;
+		}
+
+		/*
+		 * Спецификации санитизации по типу поля.
 		 */
 		$int_keys = array(
 			'max_items_total',
@@ -183,30 +193,17 @@ final class RVN_Compare_Settings {
 			'toast_duration',
 		);
 
-		foreach ( $int_keys as $key ) {
-			$sanitized[ $key ] = isset( $raw[ $key ] ) ? absint( $raw[ $key ] ) : absint( $current[ $key ] );
-		}
-
-		/*
-		 * Переключатели («галочки») — '1' если выставлены, иначе '0'.
-		 */
 		$bool_keys = array(
 			'auto_insert_table',
+			'show_stock',
 			'highlight_differences',
 			'hide_empty_rows',
 			'show_only_differences_toggle',
 			'collapse_groups',
-			'show_stock',
 			'include_subcats',
 			'custom_attributes',
 		);
-		foreach ( $bool_keys as $key ) {
-			$sanitized[ $key ] = isset( $raw[ $key ] ) && $raw[ $key ] ? '1' : '0';
-		}
 
-		/*
-		 * Текстовые поля — sanitize_text_field.
-		 */
 		$text_keys = array(
 			'button_text',
 			'button_added_text',
@@ -218,13 +215,7 @@ final class RVN_Compare_Settings {
 			'toast_cleared_text',
 			'toast_limit_text',
 		);
-		foreach ( $text_keys as $key ) {
-			$sanitized[ $key ] = isset( $raw[ $key ] ) ? sanitize_text_field( wp_unslash( $raw[ $key ] ) ) : $current[ $key ];
-		}
 
-		/*
-		 * Допустимые значения из ограниченного набора (whitelist).
-		 */
 		$positions = array(
 			'after_add_to_cart',
 			'before_add_to_cart',
@@ -236,71 +227,125 @@ final class RVN_Compare_Settings {
 			'overlay_br',
 			'disabled',
 		);
-		$sanitized['archive_button_position'] = in_array(
-			isset( $raw['archive_button_position'] ) ? sanitize_key( $raw['archive_button_position'] ) : '',
-			$positions,
-			true
-		) ? sanitize_key( $raw['archive_button_position'] ) : $current['archive_button_position'];
 
-		$sanitized['single_button_position'] = in_array(
-			isset( $raw['single_button_position'] ) ? sanitize_key( $raw['single_button_position'] ) : '',
-			$positions,
-			true
-		) ? sanitize_key( $raw['single_button_position'] ) : $current['single_button_position'];
-
-		$caps = array( 'manage_options', 'manage_woocommerce' );
-		$sanitized['admin_capability'] = in_array(
-			isset( $raw['admin_capability'] ) ? sanitize_key( $raw['admin_capability'] ) : '',
-			$caps,
-			true
-		) ? sanitize_key( $raw['admin_capability'] ) : $current['admin_capability'];
-
+		$caps   = array( 'manage_options', 'manage_woocommerce' );
 		$states = array( 'expanded', 'collapsed' );
-		$sanitized['groups_default_state'] = in_array(
-			isset( $raw['groups_default_state'] ) ? sanitize_key( $raw['groups_default_state'] ) : '',
-			$states,
-			true
-		) ? sanitize_key( $raw['groups_default_state'] ) : $current['groups_default_state'];
 
 		/*
-		 * Цвет акцента — sanitize_hex_color.
+		 * Обрабатываем только ключи активной вкладки; остальные настройки
+		 * (других вкладок) сохраняются без изменений — это исключает сброс
+		 * их значений при сохранении одной вкладки.
 		 */
-		$sanitized['accent_color'] = isset( $raw['accent_color'] ) && sanitize_hex_color( $raw['accent_color'] )
-			? sanitize_hex_color( $raw['accent_color'] )
-			: $current['accent_color'];
+		foreach ( $keys_by_tab[ $tab ] as $key ) {
+			if ( in_array( $key, $int_keys, true ) ) {
+				$sanitized[ $key ] = isset( $raw[ $key ] ) ? absint( $raw[ $key ] ) : absint( $current[ $key ] );
+				continue;
+			}
 
-		/*
-		 * ID страницы сравнения.
-		 */
-		$sanitized['compare_page_id'] = isset( $raw['compare_page_id'] ) ? absint( $raw['compare_page_id'] ) : absint( $current['compare_page_id'] );
+			if ( in_array( $key, $bool_keys, true ) ) {
+				// Снятая галочка не приходит в POST — явно пишем '0'.
+				$sanitized[ $key ] = ( isset( $raw[ $key ] ) && $raw[ $key ] ) ? '1' : '0';
+				continue;
+			}
 
-		/*
-		 * Сложные структуры на этом шаге не редактируются из формы —
-		 * переносим текущие сохранённые значения как есть.
-		 */
-		$carry = array(
-			'excluded_products',
-			'field_groups',
-			'fields',
-			'category_groups',
-			'acf_meta_fields',
-			'design',
-			'button_styles',
-			'toast_styles',
-			'uninstall',
-		);
-		foreach ( $carry as $key ) {
-			$sanitized[ $key ] = isset( $current[ $key ] ) ? $current[ $key ] : array();
+			if ( in_array( $key, $text_keys, true ) ) {
+				$sanitized[ $key ] = isset( $raw[ $key ] ) ? sanitize_text_field( wp_unslash( $raw[ $key ] ) ) : $current[ $key ];
+				continue;
+			}
+
+			if ( 'archive_button_position' === $key || 'single_button_position' === $key ) {
+				$value = isset( $raw[ $key ] ) ? sanitize_key( $raw[ $key ] ) : '';
+				$sanitized[ $key ] = in_array( $value, $positions, true ) ? $value : $current[ $key ];
+				continue;
+			}
+
+			if ( 'admin_capability' === $key ) {
+				$value = isset( $raw[ $key ] ) ? sanitize_key( $raw[ $key ] ) : '';
+				$sanitized[ $key ] = in_array( $value, $caps, true ) ? $value : $current[ $key ];
+				continue;
+			}
+
+			if ( 'groups_default_state' === $key ) {
+				$value = isset( $raw[ $key ] ) ? sanitize_key( $raw[ $key ] ) : '';
+				$sanitized[ $key ] = in_array( $value, $states, true ) ? $value : $current[ $key ];
+				continue;
+			}
+
+			if ( 'accent_color' === $key ) {
+				$sanitized[ $key ] = ( isset( $raw[ $key ] ) && sanitize_hex_color( $raw[ $key ] ) )
+					? sanitize_hex_color( $raw[ $key ] )
+					: $current[ $key ];
+				continue;
+			}
+
+			if ( 'compare_page_id' === $key ) {
+				$sanitized[ $key ] = isset( $raw[ $key ] ) ? absint( $raw[ $key ] ) : absint( $current[ $key ] );
+				continue;
+			}
 		}
 
 		/*
-		 * Финальный merge c дефолтами и запись.
+		 * Пишем полный массив: изменились только поля активной вкладки.
 		 */
-		$merged = wp_parse_args( $sanitized, $this->defaults() );
-		$this->replace( $merged );
+		$this->replace( $sanitized );
 
-		return $merged;
+		return $sanitized;
 	}
+
+	/**
+	 * Карта «вкладка админки → сохраняемые ею ключи настроек».
+	 *
+	 * Настройки, не перечисленные в активной вкладке, при сохранении
+	 * не трогаются — это защищает данные соседних вкладок от сброса.
+	 * При добавлении нового поля настройки его ключ нужно внести сюда.
+	 *
+	 * @return array
+	 */
+	private function keys_by_tab() {
+		return array(
+			'general'  => array(
+				'compare_page_id',
+				'auto_insert_table',
+				'max_items_total',
+				'max_items_per_context',
+				'breakpoint_tablet',
+				'breakpoint_mobile',
+				'columns_desktop',
+				'columns_tablet',
+				'columns_mobile',
+				'animation_speed',
+				'toast_duration',
+				'accent_color',
+				'archive_button_position',
+				'single_button_position',
+				'admin_capability',
+				'groups_default_state',
+				'show_stock',
+			),
+			'fields'   => array(
+				'highlight_differences',
+				'hide_empty_rows',
+				'show_only_differences_toggle',
+				'collapse_groups',
+				'include_subcats',
+				'custom_attributes',
+			),
+			'elements' => array(
+				'button_text',
+				'button_added_text',
+				'counter_button_text',
+				'clear_text',
+				'clear_confirm_text',
+				'toast_added_text',
+				'toast_removed_text',
+				'toast_cleared_text',
+				'toast_limit_text',
+			),
+			'design'   => array(),
+			'help'     => array(),
+		);
+	}
+
 
 	/**
 	 * Возвращает числовые лимиты (глобальный и на контекст).
