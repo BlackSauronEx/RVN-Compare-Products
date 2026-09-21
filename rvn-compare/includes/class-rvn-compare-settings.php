@@ -347,6 +347,81 @@ final class RVN_Compare_Settings {
 	}
 
 
+	/*
+	 * ---- Исключения товаров (структурированный список). ----
+	 */
+
+	/**
+	 * Возвращает карту исключённых товаров: id => ['archive'=>0/1,'single'=>0/1].
+	 *
+	 * Толерантен к legacy-формату (плоский массив ID — считаем оба контекста).
+	 *
+	 * @return array
+	 */
+	public function excluded_products() {
+		$raw = $this->get( 'excluded_products', array() );
+		$map = array();
+
+		if ( ! is_array( $raw ) || empty( $raw ) ) {
+			return $map;
+		}
+
+		foreach ( $raw as $key => $value ) {
+			if ( is_array( $value ) ) {
+				$map[ absint( $key ) ] = array(
+					'archive' => ( ! empty( $value['archive'] ) ) ? 1 : 0,
+					'single'  => ( ! empty( $value['single'] ) ) ? 1 : 0,
+				);
+			} else {
+				// Legacy: плоский список ID.
+				$map[ absint( $value ) ] = array( 'archive' => 1, 'single' => 1 );
+			}
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Добавляет/обновляет исключение товара.
+	 *
+	 * @param int  $id      ID товара.
+	 * @param bool $archive Исключить на карточках.
+	 * @param bool $single  Исключить на странице товара.
+	 * @return void
+	 */
+	public function set_excluded( $id, $archive, $single ) {
+		$map = $this->excluded_products();
+		$map[ absint( $id ) ] = array(
+			'archive' => ( $archive ? 1 : 0 ),
+			'single'  => ( $single ? 1 : 0 ),
+		);
+		$this->persist_excluded( $map );
+	}
+
+	/**
+	 * Удаляет исключение товара.
+	 *
+	 * @param int $id ID товара.
+	 * @return void
+	 */
+	public function remove_excluded( $id ) {
+		$map = $this->excluded_products();
+		unset( $map[ absint( $id ) ] );
+		$this->persist_excluded( $map );
+	}
+
+	/**
+	 * Сохраняет карту исключений в опцию настроек.
+	 *
+	 * @param array $map Карта исключений.
+	 * @return void
+	 */
+	private function persist_excluded( $map ) {
+		$all = $this->all();
+		$all['excluded_products'] = $map;
+		$this->replace( $all );
+	}
+
 	/**
 	 * Возвращает числовые лимиты (глобальный и на контекст).
 	 *

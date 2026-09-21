@@ -99,7 +99,7 @@ final class RVN_Compare_Buttons {
 	 */
 	public function render_archive_button() {
 		$product = $this->current_product();
-		if ( ! $product || ! $this->is_allowed( $product ) ) {
+		if ( ! $product || ! $this->is_allowed( $product, 'archive' ) ) {
 			return;
 		}
 
@@ -115,7 +115,7 @@ final class RVN_Compare_Buttons {
 	 */
 	public function render_single_button() {
 		$product = $this->current_product();
-		if ( ! $product || ! $this->is_allowed( $product ) ) {
+		if ( ! $product || ! $this->is_allowed( $product, 'single' ) ) {
 			return;
 		}
 
@@ -214,7 +214,7 @@ final class RVN_Compare_Buttons {
 	 * @param WC_Product $product Товар.
 	 * @return bool
 	 */
-	private function is_allowed( $product ) {
+	private function is_allowed( $product, $context = '' ) {
 		if ( ! $product instanceof WC_Product ) {
 			return false;
 		}
@@ -223,21 +223,31 @@ final class RVN_Compare_Buttons {
 		}
 
 		$id = $this->canonical_id( $product );
-		if ( in_array( $id, $this->excluded_ids(), true ) ) {
+		if ( $this->is_excluded( $id, $context ) ) {
 			return false;
 		}
 
-		return (bool) apply_filters( 'rvn_compare_button_allowed', true, $product, $id );
+		return (bool) apply_filters( 'rvn_compare_button_allowed', true, $product, $id, $context );
 	}
 
 	/**
-	 * Список ID исключённых товаров из настроек.
+	 * Проверяет, исключён ли товар в данном контексте ('archive'|'single').
 	 *
-	 * @return int[]
+	 * @param int    $id      Канонический ID товара.
+	 * @param string $context 'archive' | 'single' | '' (любой).
+	 * @return bool
 	 */
-	private function excluded_ids() {
-		$excluded = (array) RVN_Compare_Settings::instance()->get( 'excluded_products', array() );
+	public function is_excluded( $id, $context = '' ) {
+		$map = RVN_Compare_Settings::instance()->excluded_products();
 
-		return array_values( array_filter( array_map( 'absint', $excluded ) ) );
+		if ( ! isset( $map[ (int) $id ] ) ) {
+			return false;
+		}
+
+		if ( ! $context ) {
+			return (bool) $map[ (int) $id ]['archive'] || (bool) $map[ (int) $id ]['single'];
+		}
+
+		return ! empty( $map[ (int) $id ][ $context ] );
 	}
 }

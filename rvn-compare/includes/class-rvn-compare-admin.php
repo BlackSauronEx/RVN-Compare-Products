@@ -237,6 +237,7 @@ final class RVN_Compare_Admin {
 	 */
 	private function render_general_tab( $all ) {
 		$this->render_page_section( $all );
+		$this->render_exclusions_section();
 
 		echo '<h2 class="title">' . esc_html__( 'Поведение и ограничения', 'rvn-compare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation"><tbody>';
@@ -368,10 +369,13 @@ final class RVN_Compare_Admin {
 		$tab      = isset( $_POST['tab'] ) ? sanitize_key( wp_unslash( $_POST['tab'] ) ) : 'general';
 
 		/*
-		 * Действия над страницей сравнения (отдельные формы на вкладке
+		 * Действия формы исключений товаров (отдельные формы на вкладке
 		 * «Основное») — обрабатываем до сохранения настроек.
 		 */
-		if ( 'general' === $tab && isset( $_POST['rvn_compare_action'] ) ) {
+		if ( 'general' === $tab && isset( $_POST['rvn_compare_exclusion_action'] ) ) {
+			$this->handle_exclusion_action();
+			$msg = 'exclusion';
+		} elseif ( 'general' === $tab && isset( $_POST['rvn_compare_action'] ) ) {
 			$action = sanitize_key( (string) $_POST['rvn_compare_action'] );
 
 			if ( 'create_page' === $action ) {
@@ -523,6 +527,27 @@ final class RVN_Compare_Admin {
 			'page_reset'   => array( 'notice-success', __( 'Содержимое страницы сравнения сброшено (остался только шорткод).', 'rvn-compare' ) ),
 		);
 
+		// Действия исключений приходят через transient с под-типом.
+		if ( 'exclusion' === $type ) {
+			$sub = get_transient( 'rvn_compare_notice' );
+			delete_transient( 'rvn_compare_notice' );
+
+			$exclusion_messages = array(
+				'exclusion_saved'   => array( 'notice-success', __( 'Исключение товара обновлено.', 'rvn-compare' ) ),
+				'exclusion_removed' => array( 'notice-success', __( 'Товар удалён из исключений.', 'rvn-compare' ) ),
+				'exclusion_invalid' => array( 'notice-error', __( 'Не удалось добавить исключение: товар не найден или ID не указан.', 'rvn-compare' ) ),
+			);
+
+			if ( $sub && isset( $exclusion_messages[ $sub ] ) ) {
+				printf(
+					'<div class="notice %1$s is-dismissible"><p>%2$s</p></div>',
+					esc_attr( $exclusion_messages[ $sub ][0] ),
+					esc_html( $exclusion_messages[ $sub ][1] )
+				);
+			}
+			return;
+		}
+
 		if ( ! isset( $messages[ $type ] ) ) {
 			return;
 		}
@@ -532,6 +557,151 @@ final class RVN_Compare_Admin {
 			esc_attr( $messages[ $type ][0] ),
 			esc_html( $messages[ $type ][1] )
 		);
+	}
+
+	/**
+	 * Рендерит секцию «Исключения товаров» на вкладке «Основное».
+	 *
+	 * Слева — добавление (поиск WooCommerce + ручной ID), справа — список
+	 * уже исключённых товаров с флагами контекстов и удалением.
+	 *
+	 * @return void
+	 */
+	private function render_exclusions_section() {
+		echo '<h2 class="title">' . esc_html__( 'Исключения товаров', 'rvn-compare' ) . '</h2>';
+		echo '<p class="description">'
+			. esc_html__( 'Товары, для которых Autobutton не выводится. Приоритет выше настроек позиции кнопки.', 'rvn-compare' )
+			. '</p>';
+
+		echo '<div class="rvn-compare-exclusions">';
+
+		// ---- Добавление ----
+		echo '<div class="rvn-compare-exclusions__add">';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+		echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+		echo '<input type="hidden" name="tab" value="general" />';
+		echo '<input type="hidden" name="rvn_compare_exclusion_action" value="add" />';
+
+		// Поле ввода ID товара (ручной ввод; можно несколько через запятую).
+		echo '<p>';
+		echo '<label for="rvn_compare_manual_id">' . esc_html__( 'ID товара', 'rvn-compare' ) . '</label> ';
+		echo '<input type="text" id="rvn_compare_manual_id" name="rvn_compare_manual_id" class="regular-text" placeholder="' . esc_attr__( 'например 123 или 12, 34, 56', 'rvn-compare' ) . '" />';
+		echo '<br /><span class="description">' . esc_html__( 'ID можно ввести вручную (несколько — через запятую). Автопоиск по названию появится позже.', 'rvn-compare' ) . '</span>';
+		echo '</p>';
+
+		// Флаги контекстов.
+		echo '<p>';
+		echo '<label><input type="checkbox" name="rvn_compare_exc_archive" value="1" checked="checked" /> '
+			. esc_html__( 'Отключить на карточках товара', 'rvn-compare' ) . '</label><br />';
+		echo '<label><input type="checkbox" name="rvn_compare_exc_single" value="1" checked="checked" /> '
+			. esc_html__( 'Отключить на странице товара', 'rvn-compare' ) . '</label>';
+		echo '</p>';
+
+		submit_button( __( 'Добавить в исключения', 'rvn-compare' ), 'secondary', 'submit', true );
+		echo '</form>';
+		echo '</div>';
+
+		// ---- Список исключённых ----
+		echo '<div class="rvn-compare-exclusions__list">';
+		$excluded = RVN_Compare_Settings::instance()->excluded_products();
+
+		if ( empty( $excluded ) ) {
+			echo '<p class="description">' . esc_html__( 'Исключений пока нет.', 'rvn-compare' ) . '</p>';
+		} else {
+			echo '<table class="widefat striped">';
+			echo '<thead><tr><th>ID</th><th>' . esc_html__( 'Товар', 'rvn-compare' ) . '</th><th>' . esc_html__( 'Карточка', 'rvn-compare' ) . '</th><th>' . esc_html__( 'Страница', 'rvn-compare' ) . '</th><th></th></tr></thead>';
+			echo '<tbody>';
+			foreach ( $excluded as $id => $flags ) {
+				$title = function_exists( 'wc_get_product' ) ? ( function_exists( 'get_the_title' ) ? get_the_title( (int) $id ) : '' ) : '';
+				$long  = mb_strlen( (string) $title, 'UTF-8' ) > 40;
+				echo '<tr>';
+				echo '<td><code>' . esc_html( (string) $id ) . '</code></td>';
+				echo '<td>' . esc_html( $long ? mb_substr( (string) $title, 0, 40, 'UTF-8' ) . '…' : $title ) . '</td>';
+				echo '<td>';
+				echo ! empty( $flags['archive'] ) ? '<span class="dashicons dashicons-yes"></span>' : '<span class="dashicons dashicons-minus"></span>';
+				echo '</td><td>';
+				echo ! empty( $flags['single'] ) ? '<span class="dashicons dashicons-yes"></span>' : '<span class="dashicons dashicons-minus"></span>';
+				echo '</td><td>';
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rvn-compare-inline-del">';
+				wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+				echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+				echo '<input type="hidden" name="tab" value="general" />';
+				echo '<input type="hidden" name="rvn_compare_exclusion_action" value="remove" />';
+				echo '<input type="hidden" name="rvn_compare_exclusion_id" value="' . (int) $id . '" />';
+				echo '<button type="submit" class="button button-link button-link-delete" aria-label="' . esc_attr__( 'Удалить из исключений', 'rvn-compare' ) . '">✕</button>';
+				echo '</form>';
+				echo '</td></tr>';
+			}
+			echo '</tbody></table>';
+		}
+		echo '</div>';
+
+		echo '</div>';
+	}
+
+	/**
+	 * Обрабатывает действия формы исключений (add/remove).
+	 *
+	 * @return void
+	 */
+	private function handle_exclusion_action() {
+		$action = sanitize_key( (string) $_POST['rvn_compare_exclusion_action'] );
+		$settings = RVN_Compare_Settings::instance();
+
+		if ( 'add' === $action ) {
+			$raw_ids = isset( $_POST['rvn_compare_manual_id'] ) ? sanitize_text_field( wp_unslash( $_POST['rvn_compare_manual_id'] ) ) : '';
+			$ids     = $this->parse_product_ids( $raw_ids );
+
+			if ( empty( $ids ) ) {
+				set_transient( 'rvn_compare_notice', 'exclusion_invalid', 30 );
+				return;
+			}
+
+			$archive = isset( $_POST['rvn_compare_exc_archive'] ) ? 1 : 0;
+			$single  = isset( $_POST['rvn_compare_exc_single'] ) ? 1 : 0;
+
+			$applied = 0;
+			foreach ( $ids as $id ) {
+				if ( 0 === $archive && 0 === $single ) {
+					// Обе галочки сняты — удаляем исключение товара.
+					$settings->remove_excluded( $id );
+				} else {
+					$settings->set_excluded( $id, $archive, $single );
+				}
+				$applied++;
+			}
+
+			set_transient( 'rvn_compare_notice', empty( $applied ) ? 'exclusion_invalid' : 'exclusion_saved', 30 );
+		} elseif ( 'remove' === $action ) {
+			$id = isset( $_POST['rvn_compare_exclusion_id'] ) ? absint( $_POST['rvn_compare_exclusion_id'] ) : 0;
+			$settings->remove_excluded( $id );
+			set_transient( 'rvn_compare_notice', 'exclusion_removed', 30 );
+		}
+	}
+
+	/**
+	 * Разбирает пользовательский ввод ID («12, 34» или «12 34») в массив целых.
+	 *
+	 * @param string $raw Строка ввода.
+	 * @return int[]
+	 */
+	private function parse_product_ids( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( '' === $raw ) {
+			return array();
+		}
+
+		$parts = preg_split( '/[,\s]+/', $raw );
+		$ids   = array();
+		foreach ( $parts as $part ) {
+			$id = absint( $part );
+			if ( $id && ! in_array( $id, $ids, true ) ) {
+				$ids[] = $id;
+			}
+		}
+
+		return $ids;
 	}
 
 	// ---- Хелперы полей формы (общие для всех вкладок). ----

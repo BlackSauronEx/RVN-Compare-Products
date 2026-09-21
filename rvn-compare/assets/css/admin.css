@@ -32,3 +32,37 @@
 .rvn-compare-color {
 	width: 90px;
 }
+
+/* Секция исключений товаров */
+.rvn-compare-exclusions {
+	display: flex;
+	gap: 32px;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	margin: 0 0 24px;
+}
+
+.rvn-compare-exclusions__add {
+	flex: 0 0 340px;
+}
+
+.rvn-compare-exclusions__list {
+	flex: 1 1 420px;
+	max-width: 640px;
+}
+
+.rvn-compare-exclusions__list th {
+	width: auto;
+}
+
+.rvn-compare-exclusions__list td {
+	vertical-align: middle;
+}
+
+.rvn-compare-inline-del {
+	display: inline;
+}
+
+.rvn-compare-inline-del .button {
+	vertical-align: middle;
+}
