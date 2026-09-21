@@ -289,6 +289,7 @@ final class RVN_Compare_Admin {
 		), __( 'Стартовое состояние групп в таблице.', 'rvn-compare' ) );
 		$this->checkbox_field( $all, 'auto_insert_table', __( 'Авто-вставка таблицы', 'rvn-compare' ), __( 'Добавлять таблицу в конец страницы сравнения, если на ней нет шорткода.', 'rvn-compare' ) );
 		$this->checkbox_field( $all, 'show_stock', __( 'Показывать остаток', 'rvn-compare' ), __( 'Показывать «В наличии (54)» в шапке товара.', 'rvn-compare' ) );
+		$this->checkbox_field( $all, 'add_product_button', __( 'Кнопка «Добавить товар»', 'rvn-compare' ), __( 'Показывать кнопку добавления товара с поиском в тулбаре таблицы сравнения (и в пустом состоянии).', 'rvn-compare' ) );
 		echo '</tbody></table>';
 
 		// ---- Удаление данных при удалении плагина ----

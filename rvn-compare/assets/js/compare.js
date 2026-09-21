@@ -338,6 +338,204 @@
 		} );
 	}
 
+	/* ===================== «Добавить товар» (R3-01) ===================== */
+
+	var addModalEl = null;
+	var addSearchTimer = null;
+	var addLastQuery = '';
+	var addCurrentResults = [];
+
+	/**
+	 * Возвращает текст из i18n с фолбэком.
+	 */
+	function i18n( key, fallback ) {
+		return ( CFG.i18n && CFG.i18n[ key ] ) ? CFG.i18n[ key ] : fallback;
+	}
+
+	/**
+	 * Показывает запрошенные результаты поиска (или плейсхолдер).
+	 */
+	function addRenderResults( results, query ) {
+		if ( ! addModalEl ) {
+			return;
+		}
+		var list = addModalEl.querySelector( '[data-rvn-add-results]' );
+
+		// Устаревший ответ (пользователь уже ввёл другой запрос) — игнорируем.
+		if ( addLastQuery !== query ) {
+			return;
+		}
+
+		addCurrentResults = results;
+
+		list.innerHTML = '';
+
+		if ( ! results.length ) {
+			var empty = document.createElement( 'li' );
+			empty.className = 'rvn-compare-add__empty';
+			empty.textContent = i18n( 'addEmpty', 'Ничего не найдено. Попробуйте другой запрос.' );
+			list.appendChild( empty );
+			return;
+		}
+
+		// Состояние «в списке» пересчитываем из текущего items.
+		for ( var i = 0; i < results.length; i++ ) {
+			results[ i ].inList = items.indexOf( results[ i ].id ) !== -1;
+		}
+
+		for ( i = 0; i < results.length; i++ ) {
+			(function ( item ) {
+				var li = document.createElement( 'li' );
+				li.className = 'rvn-compare-add__row' + ( item.inList ? ' is-in-list' : '' );
+
+				var title = document.createElement( 'span' );
+				title.className = 'rvn-compare-add__title';
+				title.textContent = item.title;
+
+				var sku = document.createElement( 'span' );
+				sku.className = 'rvn-compare-add__sku';
+				sku.textContent = item.sku || '';
+
+				var price = document.createElement( 'span' );
+				price.className = 'rvn-compare-add__price';
+				price.innerHTML = item.price || '';
+
+				var btn = document.createElement( 'button' );
+				btn.type = 'button';
+				btn.className = 'rvn-compare-add__add';
+				btn.textContent = item.inList ? i18n( 'addInList', 'В списке' ) : i18n( 'add', 'Добавить' );
+				btn.disabled = !! item.inList;
+				btn.setAttribute( 'data-rvn-add-item', String( item.id ) );
+
+				li.appendChild( title );
+				li.appendChild( sku );
+				li.appendChild( price );
+				li.appendChild( btn );
+				list.appendChild( li );
+			})( results[ i ] );
+		}
+	}
+
+	/**
+	 * Ищет товары через REST /search (с debounce).
+	 */
+	function addSearch() {
+		if ( ! addModalEl ) {
+			return;
+		}
+		var input = addModalEl.querySelector( '[data-rvn-add-search]' );
+		var query = input ? input.value.trim() : '';
+
+		window.clearTimeout( addSearchTimer );
+		addSearchTimer = window.setTimeout( function () {
+			addLastQuery = query;
+			var list = addModalEl.querySelector( '[data-rvn-add-results]' );
+			if ( ! list ) {
+				return;
+			}
+
+			if ( ! query ) {
+				list.innerHTML = '';
+				return;
+			}
+
+			list.innerHTML = '';
+			var loading = document.createElement( 'li' );
+			loading.className = 'rvn-compare-add__loading';
+			loading.textContent = '…';
+			list.appendChild( loading );
+
+			var url = CFG.restUrl + 'search?q=' + encodeURIComponent( query );
+			window.fetch( url, {
+				credentials: 'same-origin',
+				headers: { 'X-WP-Nonce': CFG.nonce || '' }
+			} ).then( function ( r ) { return r.json(); } ).then( function ( json ) {
+				var results = ( json && json.success && json.data && json.data.results ) ? json.data.results : [];
+				addRenderResults( results, query );
+			} ).catch( function () {
+				addRenderResults( [], query );
+			} );
+		}, 300 );
+	}
+
+	/**
+	 * Строит модал «Добавить товар» (создаётся лениво один раз).
+	 */
+	function buildAddModal() {
+		var overlay = document.createElement( 'div' );
+		overlay.className = 'rvn-compare-add-overlay';
+		overlay.setAttribute( 'data-rvn-add-modal', '1' );
+
+		var box = document.createElement( 'div' );
+		box.className = 'rvn-compare-add';
+		box.setAttribute( 'role', 'dialog' );
+		box.setAttribute( 'aria-modal', 'true' );
+		box.setAttribute( 'aria-label', i18n( 'addTitle', 'Добавить товар' ) );
+
+		var header = document.createElement( 'div' );
+		header.className = 'rvn-compare-add__header';
+
+		var title = document.createElement( 'span' );
+		title.className = 'rvn-compare-add__heading';
+		title.textContent = i18n( 'addTitle', 'Добавить товар' );
+
+		var close = document.createElement( 'button' );
+		close.type = 'button';
+		close.className = 'rvn-compare-add__close';
+		close.setAttribute( 'aria-label', i18n( 'close', 'Закрыть' ) );
+		close.setAttribute( 'data-rvn-add-close', '1' );
+		close.textContent = '✕';
+
+		header.appendChild( title );
+		header.appendChild( close );
+
+		var input = document.createElement( 'input' );
+		input.type = 'search';
+		input.className = 'rvn-compare-add__input';
+		input.setAttribute( 'data-rvn-add-search', '1' );
+		input.setAttribute( 'placeholder', i18n( 'addPlaceholder', 'Найти товар по названию или SKU…' ) );
+		input.autocomplete = 'off';
+
+		var list = document.createElement( 'ul' );
+		list.className = 'rvn-compare-add__list';
+		list.setAttribute( 'data-rvn-add-results', '1' );
+
+		box.appendChild( header );
+		box.appendChild( input );
+		box.appendChild( list );
+		overlay.appendChild( box );
+
+		return overlay;
+	}
+
+	/**
+	 * Открывает модал добавления товара.
+	 */
+	function openAddModal() {
+		if ( ! addModalEl ) {
+			addModalEl = buildAddModal();
+			document.body.appendChild( addModalEl );
+		}
+		addModalEl.classList.add( 'is-open' );
+
+		var input = addModalEl.querySelector( '[data-rvn-add-search]' );
+		if ( input ) {
+			input.value = '';
+			// Подсветим существующий список подсказкой повторного поиска.
+			addSearch();
+			window.setTimeout( function () { input.focus(); }, 60 );
+		}
+	}
+
+	/**
+	 * Закрывает модал добавления товара.
+	 */
+	function closeAddModal() {
+		if ( addModalEl ) {
+			addModalEl.classList.remove( 'is-open' );
+		}
+	}
+
 	/**
 	 * Вычисляет число видимых колонок по текущей ширине окна.
 	 */
@@ -706,6 +904,10 @@
 	function onListUpdated() {
 		var table = document.querySelector( '.rvn-compare-table' );
 		if ( ! table ) {
+			// Переход «пусто → есть товары»: сервер отдаёт новую таблицу.
+			if ( items.length > 0 && document.querySelector( '.rvn-compare-empty' ) ) {
+				window.location.reload();
+			}
 			return;
 		}
 
@@ -761,6 +963,45 @@
 			if ( clearBtn ) {
 				e.preventDefault();
 				clearAll( clearBtn );
+				return;
+			}
+
+			// Модал «Добавить товар».
+			var openBtn = target.closest ? target.closest( '[data-rvn-compare-add-open]' ) : null;
+			if ( openBtn ) {
+				e.preventDefault();
+				openAddModal();
+				return;
+			}
+			var closeBtn = target.closest ? target.closest( '[data-rvn-add-close]' ) : null;
+			if ( closeBtn ) {
+				closeAddModal();
+				return;
+			}
+			var addItem = target.closest ? target.closest( '[data-rvn-add-item]' ) : null;
+			if ( addItem ) {
+				e.preventDefault();
+				var pid = parseInt( addItem.getAttribute( 'data-rvn-add-item' ), 10 );
+				toggle( pid );
+				// Перерисуем список (обновится «в списке» у всех строк).
+				addRenderResults( addCurrentResults.slice(), addLastQuery );
+			}
+
+			// Клик по подложке (мимо окна) закрывает модал.
+			if ( target.classList && target.classList.contains( 'rvn-compare-add-overlay' ) ) {
+				closeAddModal();
+			}
+		} );
+
+		// Поиск в модале: input (debounce) + Escape закрывает.
+		document.addEventListener( 'input', function ( e ) {
+			if ( e.target && e.target.hasAttribute && e.target.hasAttribute( 'data-rvn-add-search' ) ) {
+				addSearch();
+			}
+		} );
+		document.addEventListener( 'keydown', function ( e ) {
+			if ( e.key === 'Escape' && addModalEl && addModalEl.classList.contains( 'is-open' ) ) {
+				closeAddModal();
 			}
 		} );
 

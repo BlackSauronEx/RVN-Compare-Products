@@ -172,6 +172,7 @@ final class RVN_Compare_Assets {
 			'archivePosition' => (string) $settings->get( 'archive_button_position', 'after_add_to_cart' ),
 			'singlePosition'  => (string) $settings->get( 'single_button_position', 'after_add_to_cart' ),
 			'excluded'        => RVN_Compare_Settings::instance()->excluded_products(),
+			'addProductButton' => RVN_Compare_Settings::instance()->add_product_button(),
 			'i18n'    => array(
 				'added'        => (string) $settings->get( 'toast_added_text' ),
 				'removed'      => (string) $settings->get( 'toast_removed_text' ),
@@ -180,6 +181,12 @@ final class RVN_Compare_Assets {
 				'buttonLabel'  => (string) $settings->get( 'button_text' ),
 				'addedLabel'   => (string) $settings->get( 'button_added_text' ),
 				'clearConfirm' => (string) $settings->get( 'clear_confirm_text', __( 'Очистить список сравнения?', 'rvn-compare' ) ),
+				'addTitle'     => __( 'Добавить товар', 'rvn-compare' ),
+				'addPlaceholder' => __( 'Найти товар по названию или SKU…', 'rvn-compare' ),
+				'addEmpty'     => __( 'Ничего не найдено. Попробуйте другой запрос.', 'rvn-compare' ),
+				'addInList'    => __( 'В списке', 'rvn-compare' ),
+				'add'          => __( 'Добавить', 'rvn-compare' ),
+				'close'        => __( 'Закрыть', 'rvn-compare' ),
 			),
 		);
 	}

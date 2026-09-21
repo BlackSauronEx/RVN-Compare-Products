@@ -79,6 +79,7 @@ final class RVN_Compare_Settings {
 			'collapse_groups'                  => '1',
 			'groups_default_state'             => 'expanded',
 			'show_stock'                       => '1',
+			'add_product_button'               => '1',
 			'include_subcats'                  => '1',
 			'custom_attributes'                => '1',
 			'admin_capability'                 => 'manage_options',
@@ -206,6 +207,7 @@ final class RVN_Compare_Settings {
 		$bool_keys = array(
 			'auto_insert_table',
 			'show_stock',
+			'add_product_button',
 			'highlight_differences',
 			'hide_empty_rows',
 			'show_only_differences_toggle',
@@ -374,6 +376,7 @@ final class RVN_Compare_Settings {
 				'admin_capability',
 				'groups_default_state',
 				'show_stock',
+				'add_product_button',
 				'archive_show_mode',
 				'archive_show_pages',
 				'archive_show_urls',
@@ -1147,6 +1150,15 @@ final class RVN_Compare_Settings {
 	public function remove_excluded_category( $id ) {
 		$ids = $this->excluded_categories();
 		$this->set_excluded_categories( array_values( array_diff( $ids, array( absint( $id ) ) ) ) );
+	}
+
+	/**
+	 * Публичный доступ к флагу «Кнопка “Добавить товар”».
+	 *
+	 * @return bool
+	 */
+	public function add_product_button() {
+		return '1' === (string) $this->get( 'add_product_button', '1' );
 	}
 
 	/**

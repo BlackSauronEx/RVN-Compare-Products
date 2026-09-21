@@ -13,6 +13,7 @@
  *   POST /clear               — очистить список целиком.
  *   POST /merge               — слить гостевой список после логина.
  *   GET  /table               — HTML активной вкладки таблицы (AJAX).
+ *   GET  /search              — поиск товаров для кнопки «Добавить товар» (R3-01).
  *
  * @package RVN_Compare
  */
@@ -146,6 +147,22 @@ final class RVN_Compare_Rest {
 					),
 					'tab'  => array(
 						'sanitize_callback' => 'sanitize_key',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
+			'/search',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'handle_search' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'q'  => array(
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
 					),
 				),
 			)
@@ -370,6 +387,105 @@ final class RVN_Compare_Rest {
 					'html' => $html,
 					'tab'  => $tab,
 					'ids'  => $tab_ids,
+				),
+			)
+		);
+	}
+
+	/**
+	 * GET /search — подсказки товаров для кнопки «Добавить товар» (R3-01).
+	 *
+	 * Клиентский поиск по названию/SKU публичных товаров. Вызывается и для
+	 * гостей (без nonce), поэтому лимитируется скользящим окном, а данные
+	 * отдают только публичные и доступные товары.
+	 *
+	 * @param WP_REST_Request $request Запрос.
+	 * @return WP_REST_Response
+	 */
+	public function handle_search( $request ) {
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'data'    => array( 'message' => 'WooCommerce is required' ),
+				),
+				503
+			);
+		}
+
+		// Мягкий лимит для анонимного поиска (тот же механизм, что у мутаций).
+		if ( ! RVN_Compare_Rate_Limit::check() ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'data'    => array( 'message' => 'rate_limited' ),
+				),
+				429
+			);
+		}
+
+		$q = (string) $request->get_param( 'q' );
+		$q = trim( $q );
+		if ( '' === $q ) {
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array( 'results' => array(), 'count' => 0 ),
+				)
+			);
+		}
+
+		$ids = wc_get_products(
+			array(
+				'limit'  => 15,
+				'status' => 'publish',
+				's'      => $q,
+				'return' => 'ids',
+			)
+		);
+
+		$limit       = (int) RVN_Compare_Settings::instance()->get( 'max_items_total', 50 );
+		$button      = RVN_Compare_Buttons::instance();
+		$results     = array();
+		$current_ids = array_values( RVN_Compare_Storage::instance()->get_items() );
+
+		foreach ( (array) $ids as $id ) {
+			$product = wc_get_product( (int) $id );
+			if ( ! $product instanceof WC_Product ) {
+				continue;
+			}
+			if ( 'publish' !== $product->get_status() ) {
+				continue;
+			}
+			// Канонический вид: вариации не добавляем отдельной строкой (R2-16).
+			if ( $product->is_type( 'variation' ) ) {
+				continue;
+			}
+			// Исключённые товары/категории (там нет кнопки) не предлагаем.
+			if ( $button->is_excluded( (int) $id, '' ) ) {
+				continue;
+			}
+
+			$results[] = array(
+				'id'     => (int) $id,
+				'title'  => $product->get_name(),
+				'sku'    => (string) $product->get_sku(),
+				'price'  => wp_strip_all_tags( (string) $product->get_price_html() ),
+				'inList' => in_array( (int) $id, $current_ids, true ),
+			);
+
+			if ( count( $results ) >= 10 ) {
+				break;
+			}
+		}
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'data'    => array(
+					'results' => $results,
+					'count'   => count( $results ),
+					'limit'   => $limit,
 				),
 			)
 		);

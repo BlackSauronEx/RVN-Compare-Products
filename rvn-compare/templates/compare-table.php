@@ -46,9 +46,14 @@ $structure  = RVN_Compare_Table::instance()->build_structure( $active_ids, $acti
 			<span><?php esc_html_e( 'Только различия', 'rvn-compare' ); ?></span>
 		</label>
 		<?php endif; ?>
-		<button type="button" class="rvn-compare-clear" data-rvn-compare-clear>
-			<?php echo esc_html( (string) RVN_Compare_Settings::instance()->get( 'clear_text', __( 'Очистить всё', 'rvn-compare' ) ) ); ?>
-		</button>
+		<div class="rvn-compare-toolbar__actions">
+			<?php if ( RVN_Compare_Settings::instance()->add_product_button() ) : ?>
+				<?php rvn_compare_add_product_button(); ?>
+			<?php endif; ?>
+			<button type="button" class="rvn-compare-clear" data-rvn-compare-clear>
+				<?php echo esc_html( (string) RVN_Compare_Settings::instance()->get( 'clear_text', __( 'Очистить всё', 'rvn-compare' ) ) ); ?>
+			</button>
+		</div>
 	</div>
 
 	<div class="rvn-compare-table__viewport" data-rvn-compare-viewport>

@@ -71,3 +71,28 @@ if ( ! function_exists( 'rvn_compare_buy_button' ) ) {
 		);
 	}
 }
+
+if ( ! function_exists( 'rvn_compare_add_product_button' ) ) {
+	/**
+	 * Печатает кнопку «Добавить товар» (открывает модал с поиском, R3-01).
+	 *
+	 * Считаем, что у пользователя есть «умение» менять список (сам список
+	 * мутируется тем же механизмом, что и toggle), поэтому кнопка печатается
+	 * всем. Работу модала берёт на себя compare.js (data-rvn-compare-add-open).
+	 *
+	 * @param string       $label      Текст кнопки (по умолчанию из i18n-перевода).
+	 * @param string|array $extra_class Дополнительные CSS-классы.
+	 * @return void
+	 */
+	function rvn_compare_add_product_button( $label = '', $extra_class = '' ) {
+		$classes = array( 'rvn-compare-add-open' );
+		if ( $extra_class ) {
+			$classes[] = is_array( $extra_class ) ? implode( ' ', array_filter( $extra_class ) ) : (string) $extra_class;
+		}
+		echo sprintf(
+			'<button type="button" class="%1$s" data-rvn-compare-add-open>%2$s</button>',
+			esc_attr( implode( ' ', array_filter( $classes ) ) ),
+			esc_html( $label ? $label : __( 'Добавить товар', 'rvn-compare' ) )
+		);
+	}
+}

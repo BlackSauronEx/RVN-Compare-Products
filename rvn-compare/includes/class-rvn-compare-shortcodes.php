@@ -68,6 +68,11 @@ final class RVN_Compare_Shortcodes {
 				'args'        => 'class, text, confirm (0/1)',
 				'example'     => '[rvn-compare-clear text="Очистить" confirm="1"]',
 			),
+			'rvn-compare-add-button'     => array(
+				'description' => __( 'Кнопка «Добавить товар» с поиском и добавлением в список.', 'rvn-compare' ),
+				'args'        => 'class, text',
+				'example'     => '[rvn-compare-add-button text="Добавить ещё"]',
+			),
 		);
 	}
 
@@ -83,6 +88,7 @@ final class RVN_Compare_Shortcodes {
 			'rvn-compare-button'         => array( $this, 'render_button' ),
 			'rvn-compare-counter'        => array( $this, 'render_counter' ),
 			'rvn-compare-clear'          => array( $this, 'render_clear' ),
+			'rvn-compare-add-button'     => array( $this, 'render_add_button' ),
 		);
 
 		foreach ( $map as $tag => $callback ) {
@@ -270,6 +276,34 @@ final class RVN_Compare_Shortcodes {
 			esc_attr( $class ),
 			$need ? '' : ' data-rvn-compare-no-confirm="1"',
 			esc_html( $text )
+		);
+	}
+
+	/**
+	 * [rvn-compare-add-button] — кнопка открытия модала «Добавить товар».
+	 *
+	 * Аргументы: class, text (по умолчанию «Добавить товар»).
+	 *
+	 * @param array|string $atts Атрибуты шорткода.
+	 * @return string
+	 */
+	public function render_add_button( $atts ) {
+		$atts = shortcode_atts(
+			array(
+				'class' => '',
+				'text'  => '',
+			),
+			(array) $atts,
+			'rvn-compare-add-button'
+		);
+
+		$class = trim( 'rvn-compare-add-open ' . $atts['class'] );
+		$text  = trim( (string) $atts['text'] );
+
+		return sprintf(
+			'<button type="button" class="%1$s" data-rvn-compare-add-open>%2$s</button>',
+			esc_attr( $class ),
+			esc_html( $text ? $text : __( 'Добавить товар', 'rvn-compare' ) )
 		);
 	}
 }
