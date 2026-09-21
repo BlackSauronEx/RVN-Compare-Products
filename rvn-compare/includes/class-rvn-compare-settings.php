@@ -340,6 +340,7 @@ final class RVN_Compare_Settings {
 				'show_stock',
 			),
 			'fields'   => array(
+				'clear_text',
 				'highlight_differences',
 				'hide_empty_rows',
 				'show_only_differences_toggle',
@@ -351,7 +352,6 @@ final class RVN_Compare_Settings {
 				'button_text',
 				'button_added_text',
 				'counter_button_text',
-				'clear_text',
 				'clear_confirm_text',
 				'toast_added_text',
 				'toast_removed_text',
@@ -363,6 +363,87 @@ final class RVN_Compare_Settings {
 		);
 	}
 
+
+	/*
+	 * ---- Поля таблицы, группы характеристик, группы категорий (UI админки). ----
+	 */
+
+	/**
+	 * Применяет правки полей/групп/категорий из данных формы админки.
+	 *
+	 * Принимает структурированные массивы, санитизирует и пишет в опцию,
+	 * не трогая прочие настройки. Используется вкладкой «Таблица сравнения».
+	 *
+	 * @param array $raw Данные формы.
+	 * @return void
+	 */
+	public function save_compare_ui( $raw ) {
+		$all = $this->all();
+
+		if ( isset( $raw['field_groups'] ) && is_array( $raw['field_groups'] ) ) {
+			$groups = array();
+			foreach ( $raw['field_groups'] as $key => $label ) {
+				$key   = sanitize_key( $key );
+				$label = sanitize_text_field( wp_unslash( $label ) );
+				if ( $label ) {
+					$groups[ $key ] = $label;
+				}
+			}
+			if ( ! empty( $groups ) ) {
+				$all['field_groups'] = $groups;
+			}
+		}
+
+		if ( isset( $raw['fields'] ) && is_array( $raw['fields'] ) ) {
+			$fields = array();
+			foreach ( $raw['fields'] as $index => $field ) {
+				if ( ! is_array( $field ) ) {
+					continue;
+				}
+				$fields[] = array(
+					'key'     => isset( $field['key'] ) ? sanitize_key( $field['key'] ) : '',
+					'source'  => isset( $field['source'] ) ? sanitize_text_field( wp_unslash( $field['source'] ) ) : '',
+					'label'   => isset( $field['label'] ) ? sanitize_text_field( wp_unslash( $field['label'] ) ) : '',
+					'group'   => isset( $field['group'] ) ? sanitize_key( $field['group'] ) : 'basic',
+					'enabled' => isset( $field['enabled'] ) ? 1 : 0,
+				);
+			}
+			$all['fields'] = $fields;
+		}
+
+		if ( isset( $raw['acf_meta_fields'] ) && is_array( $raw['acf_meta_fields'] ) ) {
+			$meta = array();
+			foreach ( $raw['acf_meta_fields'] as $index => $field ) {
+				if ( ! is_array( $field ) || empty( $field['meta_key'] ) ) {
+					continue;
+				}
+				$meta[] = array(
+					'meta_key'   => sanitize_text_field( wp_unslash( $field['meta_key'] ) ),
+					'label'      => isset( $field['label'] ) ? sanitize_text_field( wp_unslash( $field['label'] ) ) : '',
+					'group'      => isset( $field['group'] ) ? sanitize_key( $field['group'] ) : 'specs',
+					'value_type' => isset( $field['value_type'] ) ? sanitize_key( $field['value_type'] ) : 'text',
+					'enabled'    => isset( $field['enabled'] ) ? 1 : 0,
+				);
+			}
+			$all['acf_meta_fields'] = $meta;
+		}
+
+		if ( isset( $raw['category_groups'] ) && is_array( $raw['category_groups'] ) ) {
+			$cats = array();
+			foreach ( $raw['category_groups'] as $group ) {
+				if ( ! is_array( $group ) || empty( $group['cats'] ) ) {
+					continue;
+				}
+			$cats[] = array(
+				'name' => isset( $group['name'] ) ? sanitize_text_field( wp_unslash( $group['name'] ) ) : '',
+				'cats' => array_values( array_filter( array_map( 'absint', (array) $group['cats'] ) ) ),
+			);
+		}
+		$all['category_groups'] = $cats;
+		}
+
+		$this->replace( $all );
+	}
 
 	/*
 	 * ---- Исключения товаров (структурированный список). ----

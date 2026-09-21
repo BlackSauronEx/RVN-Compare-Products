@@ -134,6 +134,68 @@ final class RVN_Compare_Categories {
 	}
 
 	/**
+	 * Сохраняет список групп категорий целиком (CRUD-хелперы переиспользуют его).
+	 *
+	 * @param array $groups Нормализованный список групп.
+	 * @return void
+	 */
+	public function save_groups( $groups ) {
+		$settings = RVN_Compare_Settings::instance();
+		$all      = $settings->all();
+		$all['category_groups'] = $groups;
+		$settings->replace( $all );
+	}
+
+	/**
+	 * Создаёт группу категорий из списка ID категорий.
+	 *
+	 * @param string $name Название группы.
+	 * @param int[]  $cats ID категорий.
+	 * @return bool Успех (false — название пустое или список пуст).
+	 */
+	public function create_group( $name, $cats ) {
+		$name = trim( (string) $name );
+		$cats = array_values( array_filter( array_map( 'absint', (array) $cats ) ) );
+
+		if ( '' === $name || empty( $cats ) ) {
+			return false;
+		}
+
+		$groups   = $this->groups();
+		$groups[] = array( 'name' => $name, 'cats' => $cats );
+		$this->save_groups( $groups );
+
+		return true;
+	}
+
+	/**
+	 * Удаляет группу категорий по индексу.
+	 *
+	 * @param int $index Индекс группы в сохранённом списке.
+	 * @return void
+	 */
+	public function delete_group( $index ) {
+		$groups = $this->groups();
+		if ( isset( $groups[ $index ] ) ) {
+			unset( $groups[ $index ] );
+			$this->save_groups( array_values( $groups ) );
+		}
+	}
+
+	/**
+	 * Возвращает ID категорий, уже занятых какими-либо группами.
+	 *
+	 * @return int[]
+	 */
+	public function taken_category_ids() {
+		$ids = array();
+		foreach ( $this->group_cat_map() as $cat_id => $group_index ) {
+			$ids[] = (int) $cat_id;
+		}
+		return $ids;
+	}
+
+	/**
 	 * Строит структуру вкладок для набора товаров.
 	 *
 	 * Порядок: группы в порядке их создания, затем категории по алфавиту,
