@@ -1,0 +1,178 @@
+/**
+ * RVN Compare — стили фронтенда.
+ *
+ * Все цвета/радиусы вынесены в CSS-переменные --rvn-compare-*, чтобы
+ * их можно было менять из админки (в т.ч. перекрывать инлайн-стилями).
+ */
+
+:root {
+	--rvn-compare-accent: #2563eb;
+	--rvn-compare-text: #1f2937;
+	--rvn-compare-surface: #ffffff;
+	--rvn-compare-bg-soft: #f3f4f6;
+	--rvn-compare-border: #e2e8f0;
+	--rvn-compare-diff: #ffcfcc;
+	--rvn-compare-radius: 12px;
+	--rvn-compare-radius-btn: 10px;
+	--rvn-compare-font-size: 14px;
+	--rvn-compare-weight: 500;
+	--rvn-compare-padding: 8px 14px;
+}
+
+/* Кнопка сравнения товара */
+.rvn-compare-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4em;
+	cursor: pointer;
+	border: 1px solid var(--rvn-compare-border);
+	background: var(--rvn-compare-surface);
+	color: var(--rvn-compare-text);
+	border-radius: var(--rvn-compare-radius-btn);
+	font-size: var(--rvn-compare-font-size);
+	font-weight: var(--rvn-compare-weight);
+	padding: var(--rvn-compare-padding);
+	line-height: 1;
+	transition: color 200ms ease, border-color 200ms ease, background-color 200ms ease;
+}
+
+.rvn-compare-button:hover {
+	background: #f8fafc;
+	color: var(--rvn-compare-accent);
+	border-color: #cbd5e1;
+}
+
+.rvn-compare-button.is-added {
+	color: var(--rvn-compare-accent);
+	border-color: var(--rvn-compare-accent);
+}
+
+/* Кнопка-счётчик меню */
+.rvn-compare-counter-button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	position: relative;
+	cursor: pointer;
+	text-decoration: none;
+	border: 1px solid var(--rvn-compare-border);
+	background: var(--rvn-compare-surface);
+	color: var(--rvn-compare-text);
+	border-radius: var(--rvn-compare-radius-btn);
+	padding: var(--rvn-compare-padding);
+	font-size: var(--rvn-compare-font-size);
+	font-weight: var(--rvn-compare-weight);
+}
+
+.rvn-compare-counter-button__badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.4em;
+	height: 1.4em;
+	padding: 0 0.35em;
+	border-radius: 999px;
+	background: var(--rvn-compare-accent);
+	color: #ffffff;
+	font-size: 0.75em;
+	font-weight: 700;
+}
+
+/* Простой счётчик */
+.rvn-compare-counter {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.3em;
+}
+
+.rvn-compare-counter a {
+	color: inherit;
+	text-decoration: none;
+}
+
+/* Кнопка очистки */
+.rvn-compare-clear {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+	border: 1px solid var(--rvn-compare-border);
+	background: var(--rvn-compare-surface);
+	color: var(--rvn-compare-text);
+	border-radius: var(--rvn-compare-radius-btn);
+	font-size: var(--rvn-compare-font-size);
+	padding: var(--rvn-compare-padding);
+}
+
+.rvn-compare-clear:hover {
+	color: #b91c1c;
+	border-color: #fca5a5;
+}
+
+/* Каркас таблицы */
+.rvn-compare-table {
+	--rvn-compare-accent: #2563eb;
+	border: 1px solid var(--rvn-compare-border);
+	border-radius: var(--rvn-compare-radius);
+	background: var(--rvn-compare-surface);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+	overflow: hidden;
+}
+
+.rvn-compare-table__toolbar {
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--rvn-compare-border);
+}
+
+.rvn-compare-table__body {
+	padding: 16px;
+}
+
+/* Пустое состояние */
+.rvn-compare-empty {
+	text-align: center;
+	padding: 48px 24px;
+	border: 1px dashed var(--rvn-compare-border);
+	border-radius: var(--rvn-compare-radius);
+	background: var(--rvn-compare-bg-soft);
+}
+
+.rvn-compare-empty__title {
+	margin: 0 0 12px;
+	font-size: 16px;
+	color: var(--rvn-compare-text);
+}
+
+.rvn-compare-empty__link {
+	color: var(--rvn-compare-accent);
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.rvn-compare-empty__link:hover {
+	text-decoration: underline;
+}
+
+/* Toast */
+.rvn-compare-toast {
+	position: fixed;
+	left: 50%;
+	bottom: 24px;
+	transform: translate(-50%, 16px);
+	background: var(--rvn-compare-surface);
+	color: var(--rvn-compare-text);
+	border: 1px solid var(--rvn-compare-border);
+	border-left: 3px solid var(--rvn-compare-accent);
+	border-radius: 10px;
+	padding: 10px 16px;
+	font-size: var(--rvn-compare-font-size);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+	opacity: 0;
+	transition: opacity 260ms ease, transform 260ms ease;
+	z-index: 999999;
+	max-width: calc( 100vw - 32px );
+}
+
+.rvn-compare-toast.is-visible {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}

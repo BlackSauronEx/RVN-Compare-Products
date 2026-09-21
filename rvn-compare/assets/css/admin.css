@@ -1,0 +1,21 @@
+/**
+ * RVN Compare — стили админки.
+ */
+
+.rvn-compare-admin .nav-tab-wrapper {
+	margin-bottom: 16px;
+}
+
+.rvn-compare-admin .form-table th {
+	width: 280px;
+}
+
+.rvn-compare-reset {
+	margin-top: 8px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+}
+
+.rvn-compare-color {
+	width: 90px;
+}
