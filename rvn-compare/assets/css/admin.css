@@ -295,3 +295,22 @@
 .rvn-compare-del-catgroup {
 	color: #b32d2e;
 }
+
+/* ===== Исключения: категории и очистка ===== */
+
+.rvn-compare-excl-cats {
+	list-style: none;
+	margin: 8px 0 12px;
+	padding: 0;
+}
+
+.rvn-compare-excl-cats li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0;
+}
+
+.rvn-compare-excl-clear {
+	margin: 8px 0;
+}

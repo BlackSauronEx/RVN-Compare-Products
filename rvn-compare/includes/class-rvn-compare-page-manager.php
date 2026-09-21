@@ -63,6 +63,25 @@ final class RVN_Compare_Page_Manager {
 	public function register_hooks() {
 		add_filter( 'display_post_states', array( $this, 'post_states' ), 10, 2 );
 		add_filter( 'the_content', array( $this, 'maybe_auto_insert_table' ), 5 );
+		add_filter( 'wp_robots', array( $this, 'maybe_noindex' ), 20 );
+	}
+
+	/**
+	 * Добавляет noindex странице сравнения (R3-04, §6.1 живого ТЗ).
+	 *
+	 * @param array $robots Текущий массив robots-директив.
+	 * @return array
+	 */
+	public function maybe_noindex( $robots ) {
+		if ( ! is_page() ) {
+			return $robots;
+		}
+		$page_id = (int) RVN_Compare_Settings::instance()->get( 'compare_page_id', 0 );
+		if ( $page_id && (int) get_the_ID() === $page_id ) {
+			$robots['noindex']  = true;
+			$robots['nofollow'] = true;
+		}
+		return $robots;
 	}
 
 	/**

@@ -271,6 +271,11 @@ final class RVN_Compare_Admin {
 		$this->select_field( $all, 'single_button_position', __( 'Позиция кнопки на странице товара', 'rvn-compare' ), $this->button_positions(), __( 'Дефолт — «После кнопки Купить».', 'rvn-compare' ) );
 		echo '</tbody></table>';
 
+		// ---- Где показывать кнопку ----
+		echo '<h2 class="title">' . esc_html__( 'Где показывать кнопку', 'rvn-compare' ) . '</h2>';
+		$this->render_visibility_rules( 'archive', __( 'На карточках товара', 'rvn-compare' ), $all );
+		$this->render_visibility_rules( 'single', __( 'На странице товара', 'rvn-compare' ), $all );
+
 		// ---- Доступ и прочее ----
 		echo '<h2 class="title">' . esc_html__( 'Доступ и прочее', 'rvn-compare' ) . '</h2>';
 		echo '<table class="form-table" role="presentation"><tbody>';
@@ -284,6 +289,29 @@ final class RVN_Compare_Admin {
 		), __( 'Стартовое состояние групп в таблице.', 'rvn-compare' ) );
 		$this->checkbox_field( $all, 'auto_insert_table', __( 'Авто-вставка таблицы', 'rvn-compare' ), __( 'Добавлять таблицу в конец страницы сравнения, если на ней нет шорткода.', 'rvn-compare' ) );
 		$this->checkbox_field( $all, 'show_stock', __( 'Показывать остаток', 'rvn-compare' ), __( 'Показывать «В наличии (54)» в шапке товара.', 'rvn-compare' ) );
+		echo '</tbody></table>';
+
+		// ---- Удаление данных при удалении плагина ----
+		$uninstall = isset( $all['uninstall'] ) && is_array( $all['uninstall'] ) ? $all['uninstall'] : array();
+		echo '<h2 class="title">' . esc_html__( 'Удаление данных при удалении плагина', 'rvn-compare' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Применяется только при полном удалении плагина. По умолчанию всё выключено.', 'rvn-compare' ) . '</p>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$items = array(
+			'delete_settings'   => __( 'Удалить настройки', 'rvn-compare' ),
+			'delete_user_lists' => __( 'Удалить списки сравнения пользователей', 'rvn-compare' ),
+			'delete_page'       => __( 'Удалить созданную страницу', 'rvn-compare' ),
+		);
+		foreach ( $items as $key => $label ) {
+			$checked = ! empty( $uninstall[ $key ] );
+			echo '<tr><th scope="row">' . esc_html( $label ) . '</th><td>';
+			printf(
+				'<label><input type="checkbox" name="uninstall[%1$s]" value="1" %2$s /> %3$s</label>',
+				esc_attr( $key ),
+				checked( $checked, true, false ),
+				esc_html__( 'Включено', 'rvn-compare' )
+			);
+			echo '</td></tr>';
+		}
 		echo '</tbody></table>';
 	}
 
@@ -837,6 +865,62 @@ final class RVN_Compare_Admin {
 	}
 
 	/**
+	 * Печатает правила «Где показывать» для заданного контекста.
+	 *
+	 * @param string $context 'archive' | 'single'.
+	 * @param string $label   Заголовок блока.
+	 * @param array  $all     Все настройки.
+	 * @return void
+	 */
+	private function render_visibility_rules( $context, $label, $all ) {
+		$prefix = 'archive' === $context ? 'archive' : 'single';
+		$mode   = (string) $this->setting_value( $all, $prefix . '_show_mode', 'all' );
+		$pages  = (array) $this->setting_value( $all, $prefix . '_show_pages', array() );
+		$urls   = (array) $this->setting_value( $all, $prefix . '_show_urls', array() );
+
+		echo '<h3>' . esc_html( $label ) . '</h3>';
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		echo '<tr><th scope="row"><label for="' . esc_attr( $prefix . '_show_mode' ) . '">' . esc_html__( 'Режим показа', 'rvn-compare' ) . '</label></th><td>';
+		echo '<select id="' . esc_attr( $prefix . '_show_mode' ) . '" name="' . esc_attr( $prefix . '_show_mode' ) . '">';
+		$modes = array(
+			'all'  => __( 'Показывать везде', 'rvn-compare' ),
+			'show' => __( 'Показывать ТОЛЬКО на выбранных', 'rvn-compare' ),
+			'hide' => __( 'Скрывать на выбранных', 'rvn-compare' ),
+		);
+		foreach ( $modes as $mk => $ml ) {
+			printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $mk ), selected( $mode, $mk, false ), esc_html( $ml ) );
+		}
+		echo '</select>';
+		echo '</td></tr>';
+
+		// Страницы — мультиселект страниц.
+		echo '<tr><th scope="row"><label>' . esc_html__( 'Страницы', 'rvn-compare' ) . '</label></th><td>';
+		echo '<select name="' . esc_attr( $prefix . '_show_pages' ) . '[]" multiple="multiple" style="width:100%;min-height:90px;">';
+		$all_pages = get_pages( array( 'post_status' => 'publish,private,draft' ) );
+		foreach ( $all_pages as $p ) {
+			printf(
+				'<option value="%1$d" %2$s>%3$s</option>',
+				(int) $p->ID,
+				selected( in_array( (int) $p->ID, array_map( 'absint', $pages ), true ), true, false ),
+				esc_html( get_the_title( $p ) )
+			);
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'Держите Ctrl/Cmd для выбора нескольких.', 'rvn-compare' ) . '</p>';
+		echo '</td></tr>';
+
+		// Произвольные URL (каждый с новой строки; * — wildcard).
+		$urls_text = implode( "\n", array_map( 'esc_textarea', $urls ) );
+		echo '<tr><th scope="row"><label for="' . esc_attr( $prefix . '_show_urls' ) . '">' . esc_html__( 'URL-адреса', 'rvn-compare' ) . '</label></th><td>';
+		echo '<textarea id="' . esc_attr( $prefix . '_show_urls' ) . '" name="' . esc_attr( $prefix . '_show_urls' ) . '" rows="3" class="large-text code" placeholder="' . esc_attr__( 'например promos/, blog/offer-*, */sale', 'rvn-compare' ) . '">' . $urls_text . '</textarea>';
+		echo '<p class="description">' . esc_html__( 'Один шаблон в строку; * — любой набор символов. Сравнивается с путём (без домена).', 'rvn-compare' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '</tbody></table>';
+	}
+
+	/**
 	 * Печатает карточку-конструктор одной кнопки.
 	 *
 	 * @param string $key   'compare' | 'added' | 'counter'.
@@ -1383,11 +1467,15 @@ final class RVN_Compare_Admin {
 		echo '<input type="hidden" name="tab" value="general" />';
 		echo '<input type="hidden" name="rvn_compare_exclusion_action" value="add" />';
 
-		// Поле ввода ID товара (ручной ввод; можно несколько через запятую).
+		// AJAX-поиск товара (wc-product-search) + ручной ID.
 		echo '<p>';
-		echo '<label for="rvn_compare_manual_id">' . esc_html__( 'ID товара', 'rvn-compare' ) . '</label> ';
+		echo '<label for="rvn_compare_product_search">' . esc_html__( 'Поиск товара', 'rvn-compare' ) . '</label> ';
+		echo '<select id="rvn_compare_product_search" name="rvn_compare_product_id[]" class="wc-product-search" style="width:100%%;" multiple="multiple" data-placeholder="' . esc_attr__( 'Начните вводить название или SKU…', 'rvn-compare' ) . '" data-action="woocommerce_json_search_products_and_variations"></select>';
+		echo '</p>';
+
+		echo '<p>';
+		echo '<label for="rvn_compare_manual_id">' . esc_html__( 'Или введите ID вручную', 'rvn-compare' ) . '</label> ';
 		echo '<input type="text" id="rvn_compare_manual_id" name="rvn_compare_manual_id" class="regular-text" placeholder="' . esc_attr__( 'например 123 или 12, 34, 56', 'rvn-compare' ) . '" />';
-		echo '<br /><span class="description">' . esc_html__( 'ID можно ввести вручную (несколько — через запятую). Автопоиск по названию появится позже.', 'rvn-compare' ) . '</span>';
 		echo '</p>';
 
 		// Флаги контекстов.
@@ -1400,14 +1488,69 @@ final class RVN_Compare_Admin {
 
 		submit_button( __( 'Добавить в исключения', 'rvn-compare' ), 'secondary', 'submit', true );
 		echo '</form>';
+
+		// Исключить целую категорию.
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:12px;">';
+		wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+		echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+		echo '<input type="hidden" name="tab" value="general" />';
+		echo '<input type="hidden" name="rvn_compare_exclusion_action" value="add_category" />';
+		echo '<p>';
+		echo '<label for="rvn_compare_excl_category">' . esc_html__( 'Исключить категорию', 'rvn-compare' ) . '</label> ';
+		echo '<select id="rvn_compare_excl_category" name="rvn_compare_exclusion_category" class="regular-text">';
+		$cats = get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false ) );
+		if ( ! empty( $cats ) && ! is_wp_error( $cats ) ) {
+			foreach ( $cats as $c ) {
+				printf( '<option value="%1$d">%2$s</option>', (int) $c->term_id, esc_html( $c->name ) );
+			}
+		}
+		echo '</select>';
+		echo '</p>';
+		submit_button( __( 'Исключить категорию', 'rvn-compare' ), 'secondary', 'submit', true );
+		echo '</form>';
 		echo '</div>';
 
 		// ---- Список исключённых ----
 		echo '<div class="rvn-compare-exclusions__list">';
-		$excluded = RVN_Compare_Settings::instance()->excluded_products();
+		$settings = RVN_Compare_Settings::instance();
+		$excluded = $settings->excluded_products();
+		$excl_cats = $settings->excluded_categories();
+
+		if ( ! empty( $excl_cats ) ) {
+			echo '<h3>' . esc_html__( 'Исключённые категории', 'rvn-compare' ) . '</h3>';
+			echo '<ul class="rvn-compare-excl-cats">';
+			foreach ( $excl_cats as $cat_id ) {
+				$term = get_term( (int) $cat_id );
+				$name = ( $term && ! is_wp_error( $term ) ) ? $term->name : ( '#' . (int) $cat_id );
+				echo '<li>' . esc_html( $name ) . ' ';
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rvn-compare-inline-del">';
+				wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+				echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+				echo '<input type="hidden" name="tab" value="general" />';
+				echo '<input type="hidden" name="rvn_compare_exclusion_action" value="remove_category" />';
+				echo '<input type="hidden" name="rvn_compare_exclusion_category" value="' . (int) $cat_id . '" />';
+				echo '<button type="submit" class="button button-link button-link-delete" aria-label="' . esc_attr__( 'Удалить из исключений', 'rvn-compare' ) . '">✕</button>';
+				echo '</form></li>';
+			}
+			echo '</ul>';
+		}
+
+		if ( empty( $excluded ) && empty( $excl_cats ) ) {
+			echo '<p class="description">' . esc_html__( 'Исключений пока нет.', 'rvn-compare' ) . '</p>';
+		}
+
+		if ( ! empty( $excluded ) || ! empty( $excl_cats ) ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="rvn-compare-excl-clear" onsubmit="return confirm(rvnCompareAdmin.confirmClearExclusions);">';
+			wp_nonce_field( 'rvn_compare_save', 'rvn_compare_nonce' );
+			echo '<input type="hidden" name="action" value="rvn_compare_save" />';
+			echo '<input type="hidden" name="tab" value="general" />';
+			echo '<input type="hidden" name="rvn_compare_exclusion_action" value="clear" />';
+			submit_button( __( 'Очистить список', 'rvn-compare' ), 'secondary', 'submit', true );
+			echo '</form>';
+		}
 
 		if ( empty( $excluded ) ) {
-			echo '<p class="description">' . esc_html__( 'Исключений пока нет.', 'rvn-compare' ) . '</p>';
+			echo '';
 		} else {
 			echo '<table class="widefat striped">';
 			echo '<thead><tr><th>ID</th><th>' . esc_html__( 'Товар', 'rvn-compare' ) . '</th><th>' . esc_html__( 'Карточка', 'rvn-compare' ) . '</th><th>' . esc_html__( 'Страница', 'rvn-compare' ) . '</th><th></th></tr></thead>';
@@ -1450,8 +1593,16 @@ final class RVN_Compare_Admin {
 		$settings = RVN_Compare_Settings::instance();
 
 		if ( 'add' === $action ) {
+			// ID могут прийти из AJAX-поиска (multiple select) или ручного ввода.
+			$ids = array();
+			if ( isset( $_POST['rvn_compare_product_id'] ) && is_array( $_POST['rvn_compare_product_id'] ) ) {
+				foreach ( $_POST['rvn_compare_product_id'] as $id ) {
+					$ids = array_merge( $ids, $this->parse_product_ids( sanitize_text_field( wp_unslash( $id ) ) ) );
+				}
+			}
 			$raw_ids = isset( $_POST['rvn_compare_manual_id'] ) ? sanitize_text_field( wp_unslash( $_POST['rvn_compare_manual_id'] ) ) : '';
-			$ids     = $this->parse_product_ids( $raw_ids );
+			$ids     = array_merge( $ids, $this->parse_product_ids( $raw_ids ) );
+			$ids     = array_values( array_unique( array_filter( $ids ) ) );
 
 			if ( empty( $ids ) ) {
 				set_transient( 'rvn_compare_notice', 'exclusion_invalid', 30 );
@@ -1463,8 +1614,10 @@ final class RVN_Compare_Admin {
 
 			$applied = 0;
 			foreach ( $ids as $id ) {
+				if ( function_exists( 'wc_get_product' ) && ! wc_get_product( (int) $id ) ) {
+					continue;
+				}
 				if ( 0 === $archive && 0 === $single ) {
-					// Обе галочки сняты — удаляем исключение товара.
 					$settings->remove_excluded( $id );
 				} else {
 					$settings->set_excluded( $id, $archive, $single );
@@ -1476,6 +1629,25 @@ final class RVN_Compare_Admin {
 		} elseif ( 'remove' === $action ) {
 			$id = isset( $_POST['rvn_compare_exclusion_id'] ) ? absint( $_POST['rvn_compare_exclusion_id'] ) : 0;
 			$settings->remove_excluded( $id );
+			set_transient( 'rvn_compare_notice', 'exclusion_removed', 30 );
+		} elseif ( 'add_category' === $action ) {
+			$cat = isset( $_POST['rvn_compare_exclusion_category'] ) ? absint( $_POST['rvn_compare_exclusion_category'] ) : 0;
+			if ( $cat ) {
+				$settings->add_excluded_category( $cat );
+				set_transient( 'rvn_compare_notice', 'exclusion_saved', 30 );
+			} else {
+				set_transient( 'rvn_compare_notice', 'exclusion_invalid', 30 );
+			}
+		} elseif ( 'remove_category' === $action ) {
+			$cat = isset( $_POST['rvn_compare_exclusion_category'] ) ? absint( $_POST['rvn_compare_exclusion_category'] ) : 0;
+			$settings->remove_excluded_category( $cat );
+			set_transient( 'rvn_compare_notice', 'exclusion_removed', 30 );
+		} elseif ( 'clear' === $action ) {
+			$settings->set_excluded_categories( array() );
+			// Очистить и товарный список: пишем пустую карту.
+			$all = $settings->all();
+			$all['excluded_products'] = array();
+			$settings->replace( $all );
 			set_transient( 'rvn_compare_notice', 'exclusion_removed', 30 );
 		}
 	}

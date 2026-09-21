@@ -92,6 +92,13 @@ final class RVN_Compare_Settings {
 			'toast_limit_text'                 => $is_ru ? 'Достигнут максимум товаров в сравнении' : 'Compare list limit reached',
 			'clear_confirm_text'               => $is_ru ? 'Очистить список сравнения?' : 'Clear the compare list?',
 			'excluded_products'                => array(),
+			'excluded_categories'              => array(),
+			'archive_show_mode'                => 'all',
+			'archive_show_pages'               => array(),
+			'archive_show_urls'                => array(),
+			'single_show_mode'                 => 'all',
+			'single_show_pages'                => array(),
+			'single_show_urls'                 => array(),
 			'field_groups'                     => array(
 				'basic' => $is_ru ? 'Основное' : 'General',
 				'dimensions' => $is_ru ? 'Вес и размеры' : 'Weight and dimensions',
@@ -299,6 +306,21 @@ final class RVN_Compare_Settings {
 				continue;
 			}
 
+			if ( 'uninstall' === $key ) {
+				$raw_u = isset( $raw['uninstall'] ) && is_array( $raw['uninstall'] ) ? $raw['uninstall'] : array();
+				$sanitized['uninstall'] = array(
+					'delete_settings'   => isset( $raw_u['delete_settings'] ) ? 1 : 0,
+					'delete_user_lists' => isset( $raw_u['delete_user_lists'] ) ? 1 : 0,
+					'delete_page'       => isset( $raw_u['delete_page'] ) ? 1 : 0,
+				);
+				continue;
+			}
+
+			// Правила показа кнопки («Где показывать»).
+			if ( null !== $this->sanitize_visibility( $key, $raw, $current, $sanitized ) ) {
+				continue;
+			}
+
 			// Ячейки вкладки «Дизайн таблицы»: ключ [секция][поле] или [css_var].
 			if ( null !== $this->sanitize_design( $key, $raw, $current, $sanitized ) ) {
 				continue;
@@ -309,6 +331,9 @@ final class RVN_Compare_Settings {
 				continue;
 			}
 		}
+
+		// Валидация адаптива: десктоп ≥ планшет ≥ телефон (колонки и брейкпоинты).
+		$this->clamp_responsive( $sanitized );
 
 		/*
 		 * Пишем полный массив: изменились только поля активной вкладки.
@@ -349,6 +374,13 @@ final class RVN_Compare_Settings {
 				'admin_capability',
 				'groups_default_state',
 				'show_stock',
+				'archive_show_mode',
+				'archive_show_pages',
+				'archive_show_urls',
+				'single_show_mode',
+				'single_show_pages',
+				'single_show_urls',
+				'uninstall',
 			),
 			'fields'   => array(
 				'clear_text',
@@ -377,6 +409,90 @@ final class RVN_Compare_Settings {
 		);
 	}
 
+
+	/*
+	 * ---- Правила показа кнопки («Где показывать», §6.1 п.2–3). ----
+	 */
+
+	/**
+	 * Санитизирует ключи видимости кнопки (show_mode / show_pages / show_urls).
+	 *
+	 * @param string $key       Ключ настройки.
+	 * @param array  $raw       Сырые данные формы.
+	 * @param array  $current   Текущие настройки.
+	 * @param array  $sanitized Санитизированный массив (по ссылке).
+	 * @return bool|null true — обработано; null — не ключ видимости.
+	 */
+	private function sanitize_visibility( $key, $raw, $current, &$sanitized ) {
+		if ( 0 === strpos( $key, 'archive_show_' ) ) {
+			$field = substr( $key, strlen( 'archive_show_' ) );
+			if ( 'mode' === $field ) {
+				$v = isset( $raw[ $key ] ) ? sanitize_key( (string) $raw[ $key ] ) : '';
+				$sanitized[ $key ] = in_array( $v, array( 'all', 'show', 'hide' ), true ) ? $v : $current[ $key ];
+			} elseif ( 'pages' === $field ) {
+				$pages = isset( $raw[ $key ] ) && is_array( $raw[ $key ] ) ? $raw[ $key ] : array();
+				$sanitized[ $key ] = array_values( array_filter( array_map( 'absint', $pages ) ) );
+			} else {
+				// 'urls': textarea отдаёт строку с переносами, либо массив.
+				$raw_urls = isset( $raw[ $key ] ) ? $raw[ $key ] : '';
+				$urls = is_array( $raw_urls ) ? $raw_urls : preg_split( '/[\r\n]+/', (string) $raw_urls );
+				$out  = array();
+				foreach ( $urls as $u ) {
+					$u = sanitize_text_field( wp_unslash( $u ) );
+					$u = trim( $u );
+					if ( '' !== $u && ! in_array( $u, $out, true ) ) {
+						$out[] = $u;
+					}
+				}
+				$sanitized[ $key ] = $out;
+			}
+			return true;
+		}
+
+		if ( 0 === strpos( $key, 'single_show_' ) ) {
+			$field = substr( $key, strlen( 'single_show_' ) );
+			if ( 'mode' === $field ) {
+				$v = isset( $raw[ $key ] ) ? sanitize_key( (string) $raw[ $key ] ) : '';
+				$sanitized[ $key ] = in_array( $v, array( 'all', 'show', 'hide' ), true ) ? $v : $current[ $key ];
+			} elseif ( 'pages' === $field ) {
+				$pages = isset( $raw[ $key ] ) && is_array( $raw[ $key ] ) ? $raw[ $key ] : array();
+				$sanitized[ $key ] = array_values( array_filter( array_map( 'absint', $pages ) ) );
+			} else {
+				$raw_urls = isset( $raw[ $key ] ) ? $raw[ $key ] : '';
+				$urls = is_array( $raw_urls ) ? $raw_urls : preg_split( '/[\r\n]+/', (string) $raw_urls );
+				$out  = array();
+				foreach ( $urls as $u ) {
+					$u = sanitize_text_field( wp_unslash( $u ) );
+					$u = trim( $u );
+					if ( '' !== $u && ! in_array( $u, $out, true ) ) {
+						$out[] = $u;
+					}
+				}
+				$sanitized[ $key ] = $out;
+			}
+			return true;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Валидация: десктоп ≥ планшет ≥ телефон по колонкам и брейкпоинтам (§6.1 п.5).
+	 *
+	 * @param array $s Санитизированные настройки (по ссылке).
+	 * @return void
+	 */
+	private function clamp_responsive( &$s ) {
+		if ( (int) $s['columns_tablet'] > (int) $s['columns_desktop'] ) {
+			$s['columns_tablet'] = (int) $s['columns_desktop'];
+		}
+		if ( (int) $s['columns_mobile'] > (int) $s['columns_tablet'] ) {
+			$s['columns_mobile'] = (int) $s['columns_tablet'];
+		}
+		if ( (int) $s['breakpoint_mobile'] > (int) $s['breakpoint_tablet'] ) {
+			$s['breakpoint_mobile'] = (int) $s['breakpoint_tablet'];
+		}
+	}
 
 	/*
 	 * ---- Дизайн таблицы (§6.3 живого ТЗ) ----
@@ -951,6 +1067,66 @@ final class RVN_Compare_Settings {
 		$all = $this->all();
 		$all['excluded_products'] = $map;
 		$this->replace( $all );
+	}
+
+	/**
+	 * Правила показа кнопки сравнения для контекста ('archive' | 'single').
+	 *
+	 * @param string $context Контекст.
+	 * @return array{mode:string, pages:int[], urls:string[]}
+	 */
+	public function visibility( $context ) {
+		$prefix = 'archive' === $context ? 'archive' : 'single';
+
+		return array(
+			'mode'  => (string) $this->get( $prefix . '_show_mode', 'all' ),
+			'pages' => array_values( array_filter( array_map( 'absint', (array) $this->get( $prefix . '_show_pages', array() ) ) ) ),
+			'urls'  => (array) $this->get( $prefix . '_show_urls', array() ),
+		);
+	}
+
+	/**
+	 * Список исключённых категорий (ID).
+	 *
+	 * @return int[]
+	 */
+	public function excluded_categories() {
+		return array_values( array_filter( array_map( 'absint', (array) $this->get( 'excluded_categories', array() ) ) ) );
+	}
+
+	/**
+	 * Устанавливает список исключённых категорий целиком.
+	 *
+	 * @param int[] $ids ID категорий.
+	 * @return void
+	 */
+	public function set_excluded_categories( $ids ) {
+		$all = $this->all();
+		$all['excluded_categories'] = array_values( array_filter( array_map( 'absint', (array) $ids ) ) );
+		$this->replace( $all );
+	}
+
+	/**
+	 * Добавляет категорию в исключения.
+	 *
+	 * @param int $id ID категории.
+	 * @return void
+	 */
+	public function add_excluded_category( $id ) {
+		$ids   = $this->excluded_categories();
+		$ids[] = absint( $id );
+		$this->set_excluded_categories( array_unique( $ids ) );
+	}
+
+	/**
+	 * Удаляет категорию из исключений.
+	 *
+	 * @param int $id ID категории.
+	 * @return void
+	 */
+	public function remove_excluded_category( $id ) {
+		$ids = $this->excluded_categories();
+		$this->set_excluded_categories( array_values( array_diff( $ids, array( absint( $id ) ) ) ) );
 	}
 
 	/**

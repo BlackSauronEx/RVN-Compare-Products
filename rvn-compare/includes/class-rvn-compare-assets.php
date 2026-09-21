@@ -120,13 +120,21 @@ final class RVN_Compare_Assets {
 		);
 		wp_enqueue_script( 'rvn-compare-admin' );
 
+		// AJAX-поиск товаров в исключениях: enqueue стандартные ассеты WooCommerce
+		// (select2 + wc-enhanced-select), если WC активен. Без WC — no-op.
+		if ( function_exists( 'WC' ) ) {
+			wp_enqueue_script( 'wc-enhanced-select' );
+			wp_enqueue_style( 'woocommerce_admin_styles' );
+		}
+
 		wp_localize_script(
 			'rvn-compare-admin',
 			'rvnCompareAdmin',
 			array(
-				'confirmResetTab'  => __( 'Сбросить все значения на этой вкладке?', 'rvn-compare' ),
-				'confirmResetAll'  => __( 'Сбросить все настройки плагина к значениям по умолчанию?', 'rvn-compare' ),
-				'confirmResetPage' => __( 'Заменить содержимое страницы сравнения только шорткодом таблицы? Существующее содержимое будет удалено.', 'rvn-compare' ),
+				'confirmResetTab'       => __( 'Сбросить все значения на этой вкладке?', 'rvn-compare' ),
+				'confirmResetAll'       => __( 'Сбросить все настройки плагина к значениям по умолчанию?', 'rvn-compare' ),
+				'confirmResetPage'      => __( 'Заменить содержимое страницы сравнения только шорткодом таблицы? Существующее содержимое будет удалено.', 'rvn-compare' ),
+				'confirmClearExclusions' => __( 'Удалить все исключения (товары и категории)?', 'rvn-compare' ),
 			)
 		);
 	}

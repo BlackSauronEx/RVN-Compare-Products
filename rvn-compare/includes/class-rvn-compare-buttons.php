@@ -237,7 +237,64 @@ final class RVN_Compare_Buttons {
 			return false;
 		}
 
+		if ( $context && ! $this->is_visible_by_rules( $context ) ) {
+			return false;
+		}
+
 		return (bool) apply_filters( 'rvn_compare_button_allowed', true, $product, $id, $context );
+	}
+
+	/**
+	 * Проверяет правила «Где показывать» для контекста (§6.1 п.2–3).
+	 *
+	 * Режимы: all (везде), show (только выбранные страницы/URL),
+	 * hide (везде, кроме выбранных). URL поддерживают «*» (wildcard).
+	 *
+	 * @param string $context 'archive' | 'single'.
+	 * @return bool
+	 */
+	private function is_visible_by_rules( $context ) {
+		$rules = RVN_Compare_Settings::instance()->visibility( $context );
+
+		if ( 'all' === $rules['mode'] ) {
+			return true;
+		}
+
+		$current_page = function_exists( 'get_the_ID' ) ? (int) get_the_ID() : 0;
+
+		// Разрешим страницы по ID.
+		$on_page = $current_page && in_array( $current_page, $rules['pages'], true );
+
+		// URL-правила: сравниваем path текущего адреса с wildcard-шаблонами.
+		global $wp;
+		$path = '';
+		if ( isset( $wp->request ) ) {
+			$path = (string) $wp->request;
+		} else {
+			$path = isset( $_SERVER['REQUEST_URI'] ) ? trim( (string) wp_parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ), '/' ) : '';
+		}
+
+		$on_url = false;
+		foreach ( $rules['urls'] as $pattern ) {
+			$pattern = trim( (string) $pattern, '/' );
+			if ( '' === $pattern ) {
+				continue;
+			}
+			if ( false !== strpos( $pattern, '*' ) ) {
+				$regex = '#^' . str_replace( '\\*', '.*', preg_quote( $pattern, '#' ) ) . '$#i';
+				if ( preg_match( $regex, $path ) ) {
+					$on_url = true;
+					break;
+				}
+			} elseif ( $pattern === $path ) {
+				$on_url = true;
+				break;
+			}
+		}
+
+		$matched = $on_page || $on_url;
+
+		return ( 'show' === $rules['mode'] ) ? $matched : ! $matched;
 	}
 
 	/**
@@ -248,7 +305,20 @@ final class RVN_Compare_Buttons {
 	 * @return bool
 	 */
 	public function is_excluded( $id, $context = '' ) {
-		$map = RVN_Compare_Settings::instance()->excluded_products();
+		$settings = RVN_Compare_Settings::instance();
+		$map      = $settings->excluded_products();
+
+		// Товар в исключённой категории — скрываем в обоих контекстах.
+		$excluded_cats = $settings->excluded_categories();
+		if ( ! empty( $excluded_cats ) && function_exists( 'wc_get_product' ) ) {
+			$product = wc_get_product( (int) $id );
+			if ( $product instanceof WC_Product ) {
+				$cats = array_map( 'absint', $product->get_category_ids() );
+				if ( array_intersect( $cats, $excluded_cats ) ) {
+					return true;
+				}
+			}
+		}
 
 		if ( ! isset( $map[ (int) $id ] ) ) {
 			return false;
