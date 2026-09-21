@@ -392,6 +392,12 @@ final class RVN_Compare_Admin {
 		$saved  = empty( $saved ) ? array() : $saved;
 
 		echo '<h3>' . esc_html__( 'Основные поля', 'rvn-compare' ) . '</h3>';
+		echo '<div class="rvn-compare-fields-toolbar" data-rvn-fields-list>';
+		echo '<input type="search" class="regular-text" data-rvn-fields-search placeholder="' . esc_attr__( 'Поиск по полям…', 'rvn-compare' ) . '" />';
+		echo '<button type="button" class="button" data-rvn-fields-all>' . esc_html__( 'Включить все', 'rvn-compare' ) . '</button>';
+		echo '<button type="button" class="button" data-rvn-fields-none>' . esc_html__( 'Выключить все', 'rvn-compare' ) . '</button>';
+		echo '</div>';
+		echo '<p class="description">' . esc_html__( 'Кнопки действуют на видимые (отфильтрованные) поля.', 'rvn-compare' ) . '</p>';
 		echo '<ul class="rvn-compare-sort rvn-compare-sort--fields" data-rvn-compare-sort="core-fields">';
 		foreach ( $core as $field ) {
 			$key = $field['key'];
@@ -401,7 +407,7 @@ final class RVN_Compare_Admin {
 			$hint    = isset( $override['hint'] ) ? $override['hint'] : ( isset( $field['hint'] ) ? $field['hint'] : '' );
 			$group   = isset( $override['group'] ) && $override['group'] ? $override['group'] : ( isset( $field['group'] ) ? $field['group'] : 'basic' );
 
-			echo '<li class="rvn-compare-sort__item" data-core-field="' . esc_attr( $key ) . '">';
+			echo '<li class="rvn-compare-sort__item" data-core-field="' . esc_attr( $key ) . '" data-field-label="' . esc_attr( $label . ' ' . $key ) . '">';
 			echo '<span class="rvn-compare-sort__handle" aria-hidden="true">⠿</span>';
 			echo '<label class="rvn-compare-sort__toggle"><input type="checkbox" name="core_fields[' . esc_attr( $key ) . '][enabled]" value="1" ' . checked( $enabled, true, false ) . ' /> ' . esc_html__( 'Вкл', 'rvn-compare' ) . '</label>';
 			echo '<input type="text" name="core_fields[' . esc_attr( $key ) . '][label]" value="' . esc_attr( $label ) . '" class="regular-text" placeholder="' . esc_attr__( 'Название (пусто = дефолт)', 'rvn-compare' ) . '" />';
@@ -593,23 +599,25 @@ final class RVN_Compare_Admin {
 
 		// ---- Кнопки «Купить» ----
 		echo '<h2 class="title">' . esc_html__( 'Кнопка «Купить» в таблице', 'rvn-compare' ) . '</h2>';
-		echo '<p class="description">' . esc_html__( 'Что показывать в трёх местах таблицы: стандартную кнопку «Купить», свой шорткод или ничего.', 'rvn-compare' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Что показывать в трёх местах таблицы: стандартную кнопку «Купить», свой шорткод (один или несколько) или ничего.', 'rvn-compare' ) . '</p>';
 		echo '<table class="form-table" role="presentation"><tbody>';
 		$this->design_select_row( 'behavior', 'buy_header', __( 'В шапке (под товаром)', 'rvn-compare' ), $design, $def, array(
 			'buy'       => __( 'Кнопка «Купить»', 'rvn-compare' ),
-			'shortcode' => __( 'Мой шорткод', 'rvn-compare' ),
+			'shortcode' => __( 'Мои шорткоды', 'rvn-compare' ),
 			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
 		), __( 'Кнопка под названием/ценой товара (R4-03).', 'rvn-compare' ) );
 		$this->design_select_row( 'behavior', 'buy_bottom', __( 'Внизу таблицы', 'rvn-compare' ), $design, $def, array(
 			'buy'       => __( 'Кнопка «Купить»', 'rvn-compare' ),
-			'shortcode' => __( 'Мой шорткод', 'rvn-compare' ),
+			'shortcode' => __( 'Мои шорткоды', 'rvn-compare' ),
 			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
 		), __( 'Нижний ряд таблицы. Шорткод для шапки/низа выводится в самих местах с 0 аргументами.', 'rvn-compare' ) );
 		$this->design_select_row( 'behavior', 'buy_floating', __( 'В плавающей панели', 'rvn-compare' ), $design, $def, array(
 			'buy'       => __( 'Кнопка «Купить»', 'rvn-compare' ),
-			'shortcode' => __( 'Мой шорткод', 'rvn-compare' ),
+			'shortcode' => __( 'Мои шорткоды', 'rvn-compare' ),
 			'hidden'    => __( 'Скрыть', 'rvn-compare' ),
 		), __( 'Компактная панель при прокрутке. Если скрыто — показывается фото.', 'rvn-compare' ) );
+		$this->design_textarea_row( 'behavior', 'buy_shortcodes', __( 'Мои шорткоды', 'rvn-compare' ), $design, $def, 4, __( 'Одна строка = один шорткод. Выводятся все подряд (do_shortcode) в месте, где выбран режим «Мои шорткоды».', 'rvn-compare' ) );
+		$this->design_checkbox_row( 'behavior', 'inherit_theme_styles', __( 'Наследовать стили темы', 'rvn-compare' ), $design, $def, __( 'Вместо фирменных стилей кнопке даются классы темы (button / button alt); оформление берётся из темы, как у WooCommerce.', 'rvn-compare' ) );
 		echo '</tbody></table>';
 
 		// Мягкий фон групп.
@@ -734,6 +742,64 @@ final class RVN_Compare_Admin {
 	}
 
 	/**
+	 * Печатает строку-textarea вкладки «Дизайн таблицы» (одна строка = один элемент).
+	 *
+	 * @param string $section    Секция дизайна.
+	 * @param string $field      Поле.
+	 * @param string $label      Подпись.
+	 * @param array  $design     Текущий дизайн.
+	 * @param array  $def        Дефолты.
+	 * @param int    $rows       Кол-во видимых строк.
+	 * @param string $help       Пояснение.
+	 * @return void
+	 */
+	private function design_textarea_row( $section, $field, $label, $design, $def, $rows = 4, $help = '' ) {
+		$value = $this->design_setting( $design, $section, $field, $def );
+		if ( is_array( $value ) ) {
+			$value = implode( "\n", $value );
+		}
+		printf( '<tr><th scope="row"><label for="%1$s">%2$s</label></th><td>', esc_attr( 'd_' . $field ), esc_html( $label ) );
+		printf(
+			'<textarea id="%1$s" name="%2$s" rows="%3$d" class="large-text code" placeholder="%4$s">%5$s</textarea>',
+			esc_attr( 'd_' . $field ),
+			esc_attr( 'design[' . $section . '][' . $field . ']' ),
+			(int) $rows,
+			esc_attr__( 'Одна строка = один шорткод', 'rvn-compare' ),
+			esc_textarea( $value )
+		);
+		if ( $help ) {
+			echo '<p class="description">' . esc_html( $help ) . '</p>';
+		}
+		echo '</td></tr>';
+	}
+
+	/**
+	 * Печатает строку-чекбокс вкладки «Дизайн таблицы».
+	 *
+	 * @param string $section Секция дизайна.
+	 * @param string $field   Поле.
+	 * @param string $label   Подпись.
+	 * @param array  $design  Текущий дизайн.
+	 * @param array  $def     Дефолты.
+	 * @param string $help    Пояснение.
+	 * @return void
+	 */
+	private function design_checkbox_row( $section, $field, $label, $design, $def, $help = '' ) {
+		$value = $this->design_setting( $design, $section, $field, $def );
+		printf( '<tr><th scope="row">%s</th><td>', esc_html( $label ) );
+		printf(
+			'<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>',
+			esc_attr( 'design[' . $section . '][' . $field . ']' ),
+			checked( '1', (string) $value, false ),
+			esc_html__( 'Включено', 'rvn-compare' )
+		);
+		if ( $help ) {
+			echo '<p class="description">' . esc_html( $help ) . '</p>';
+		}
+		echo '</td></tr>';
+	}
+
+	/**
 	 * Рендерит демо-таблицу живого предпросмотра вкладки «Дизайн таблицы».
 	 *
 	 * Статическая разметка двух фейковых товаров; JS (admin.js) по вводу
@@ -759,7 +825,7 @@ final class RVN_Compare_Admin {
 			array( 'name' => __( 'Смартфон B', 'rvn-compare' ), 'price' => '27 490 ₽' ),
 		);
 		foreach ( $demo as $d ) {
-			echo '<div class="rvn-compare-col rvn-compare-col--header"><span class="rvn-compare-col__thumb"></span><span class="rvn-compare-col__title">' . esc_html( $d['name'] ) . '</span><span class="rvn-compare-col__price">' . esc_html( $d['price'] ) . '</span><a class="rvn-compare-buy" href="#">' . esc_html__( 'Купить', 'rvn-compare' ) . '</a></div>';
+			echo '<div class="rvn-compare-col rvn-compare-col--header"><span class="rvn-compare-col__thumb"></span><span class="rvn-compare-col__title">' . esc_html( $d['name'] ) . '</span><span class="rvn-compare-col__price">' . esc_html( $d['price'] ) . '</span><a class="rvn-compare-buy" href="#" data-rvn-buy-preview>' . esc_html__( 'Купить', 'rvn-compare' ) . '</a></div>';
 		}
 		echo '</div>'; // /columns
 

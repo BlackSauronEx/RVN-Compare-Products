@@ -38,6 +38,8 @@ $def_design      = (array) $settings->defaults()['design'];
 $buy_header      = isset( $settings_design['behavior']['buy_header'] ) ? $settings_design['behavior']['buy_header'] : $def_design['behavior']['buy_header'];
 $buy_bottom      = isset( $settings_design['behavior']['buy_bottom'] ) ? $settings_design['behavior']['buy_bottom'] : $def_design['behavior']['buy_bottom'];
 $buy_floating    = isset( $settings_design['behavior']['buy_floating'] ) ? $settings_design['behavior']['buy_floating'] : $def_design['behavior']['buy_floating'];
+$inherit_theme   = isset( $settings_design['behavior']['inherit_theme_styles'] ) ? $settings_design['behavior']['inherit_theme_styles'] : $def_design['behavior']['inherit_theme_styles'];
+$inherit_theme   = ( '1' === (string) $inherit_theme );
 $photo_fit       = isset( $settings_design['geometry']['photo_fit'] ) ? $settings_design['geometry']['photo_fit'] : $def_design['geometry']['photo_fit'];
 
 $show_stock    = '1' === (string) $settings->get( 'show_stock', '1' );
@@ -88,7 +90,7 @@ $count = count( $ids );
 						<span class="rvn-compare-col__price"><?php echo $price; // phpcs:ignore WordPress.Security.EscapeOutput -- get_price_html(). ?></span>
 
 						<div class="rvn-compare-col__buy rvn-compare-buy-slot" data-buy-slot="header">
-							<?php rvn_compare_buy_button( $product, $id, $buy_header ); ?>
+							<?php rvn_compare_buy_button( $product, $id, $buy_header, $inherit_theme ); ?>
 
 							<?php if ( $show_stock ) : ?>
 								<span class="rvn-compare-col__stock">
@@ -102,8 +104,8 @@ $count = count( $ids );
 							<?php endif; ?>
 						</div>
 
-						<div class="rvn-compare-buy-slot" data-buy-slot="bottom"><?php rvn_compare_buy_button( $product, $id, $buy_bottom ); ?></div>
-						<div class="rvn-compare-buy-slot rvn-compare-buy-slot--floating-only" data-buy-slot="floating"><?php rvn_compare_buy_button( $product, $id, $buy_floating ); ?></div>
+						<div class="rvn-compare-buy-slot" data-buy-slot="bottom"><?php rvn_compare_buy_button( $product, $id, $buy_bottom, $inherit_theme ); ?></div>
+						<div class="rvn-compare-buy-slot rvn-compare-buy-slot--floating-only" data-buy-slot="floating"><?php rvn_compare_buy_button( $product, $id, $buy_floating, $inherit_theme ); ?></div>
 					</div>
 				<?php endforeach; ?>
 			</div>

@@ -100,6 +100,40 @@
 
 		applyPhotoFit( root );
 		applySoftBg( root, document.querySelector( '.rvn-compare-design__form input[name="design[behavior][soft_bg_enabled]"]' ) );
+		refreshBuyPreview();
+	}
+
+	/**
+	 * Перерисовывает кнопку «Купить» в превью по настройке режима и
+	 * «наследовать стили темы» (режим «Мои шорткоды» показываем плейсхолдером).
+	 */
+	function refreshBuyPreview() {
+		var root = previewRoot();
+		if ( ! root ) {
+			return;
+		}
+		var buys = root.querySelectorAll( '[data-rvn-buy-preview]' );
+		var headerSel = document.querySelector( '.rvn-compare-design__form select[name="design[behavior][buy_header]"]' );
+		var inherit = document.querySelector( '.rvn-compare-design__form input[name="design[behavior][inherit_theme_styles]"]' );
+		var mode = headerSel ? headerSel.value : 'buy';
+		var theme = !!( inherit && inherit.checked );
+
+		for ( var i = 0; i < buys.length; i++ ) {
+			var el = buys[ i ];
+			el.classList.toggle( 'rvn-compare-buy--theme', theme );
+			if ( mode === 'hidden' ) {
+				el.style.display = 'none';
+			} else {
+				el.style.display = '';
+				if ( mode === 'shortcode' ) {
+					el.setAttribute( 'data-rvn-buy-preview-text', el.textContent );
+					el.textContent = '[shortcode]';
+				} else if ( el.hasAttribute( 'data-rvn-buy-preview-text' ) ) {
+					el.textContent = el.getAttribute( 'data-rvn-buy-preview-text' );
+					el.removeAttribute( 'data-rvn-buy-preview-text' );
+				}
+			}
+		}
 	}
 
 	/**
@@ -399,13 +433,67 @@
 			try {
 				navigator.clipboard.writeText( text ).then( function () {
 					var original = btn.textContent;
-					btn.textContent = '✓';
+					btn.textContent = 'Скопировано ✓';
+					btn.disabled = true;
 					setTimeout( function () {
 						btn.textContent = original;
+						btn.disabled = false;
 					}, 1200 );
 				} ).catch( function () { /* игнорируем — тихий фолбэк ниже */ } );
 			} catch ( err ) { /* старые браузеры */ }
 		} );
+	}
+
+	/**
+	 * Панель «Поля таблицы»: поиск/фильтр + вкл/выкл все (по видимым).
+	 */
+	function bindFieldsToolbar() {
+		var list = document.querySelector( '[data-rvn-fields-list]' );
+		if ( ! list ) {
+			return;
+		}
+		var search = list.querySelector( '[data-rvn-fields-search]' );
+		var btnAll = list.querySelector( '[data-rvn-fields-all]' );
+		var btnNone = list.querySelector( '[data-rvn-fields-none]' );
+		var container = list.parentNode;
+		var items = container ? container.querySelectorAll( '.rvn-compare-sort--fields .rvn-compare-sort__item' ) : [];
+
+		function applyFilter( query ) {
+			var q = ( query || '' ).trim().toLocaleLowerCase();
+			for ( var i = 0; i < items.length; i++ ) {
+				var label = ( items[ i ].getAttribute( 'data-field-label' ) || '' ).toLocaleLowerCase();
+				items[ i ].classList.toggle( 'is-hidden', q !== '' && label.indexOf( q ) === -1 );
+			}
+		}
+
+		if ( search ) {
+			search.addEventListener( 'input', function () {
+				applyFilter( search.value );
+			} );
+		}
+
+		function setVisible( checked ) {
+			for ( var i = 0; i < items.length; i++ ) {
+				if ( items[ i ].classList.contains( 'is-hidden' ) ) {
+					continue;
+				}
+				var input = items[ i ].querySelector( '.rvn-compare-sort__toggle input[type="checkbox"]' );
+				if ( input ) {
+					input.checked = checked;
+				}
+			}
+		}
+
+		if ( btnAll ) {
+			btnAll.addEventListener( 'click', function () {
+				setVisible( true );
+			} );
+		}
+		if ( btnNone ) {
+			btnNone.addEventListener( 'click', function () {
+				setVisible( false );
+			} );
+		}
 	}
 
 	function init() {
@@ -434,6 +522,7 @@
 
 		bindFieldGroupsUI();
 		bindCopyShortcodes();
+		bindFieldsToolbar();
 	}
 
 	if ( document.readyState === 'loading' ) {

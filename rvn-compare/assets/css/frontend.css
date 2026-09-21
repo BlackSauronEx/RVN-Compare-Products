@@ -509,6 +509,20 @@
 	filter: brightness(0.95);
 }
 
+/* «Наследовать стили темы»: убираем фирменную раскраску, оформление
+ * отдаётся классам темы (button / button alt / wp-element-button). */
+.rvn-compare-buy--theme {
+	background-color: initial;
+	color: inherit;
+	font-weight: inherit;
+	border-radius: inherit;
+}
+
+.rvn-compare-buy--theme:hover {
+	color: inherit;
+	filter: none;
+}
+
 .rvn-compare-col__stock {
 	font-size: 12px;
 	color: #16a34a;

@@ -536,10 +536,12 @@ final class RVN_Compare_Settings {
 				'photo_fit'    => 'contain',
 			),
 			'behavior' => array(
-				'soft_bg_enabled' => '1',
-				'buy_header'      => 'buy',
-				'buy_bottom'      => 'buy',
-				'buy_floating'    => 'buy',
+				'soft_bg_enabled'      => '1',
+				'buy_header'           => 'buy',
+				'buy_bottom'           => 'buy',
+				'buy_floating'         => 'buy',
+				'buy_shortcodes'       => array(),
+				'inherit_theme_styles' => '0',
 			),
 		);
 	}
@@ -581,6 +583,8 @@ final class RVN_Compare_Settings {
 			'design[behavior][buy_header]',
 			'design[behavior][buy_bottom]',
 			'design[behavior][buy_floating]',
+			'design[behavior][buy_shortcodes]',
+			'design[behavior][inherit_theme_styles]',
 		);
 	}
 
@@ -646,6 +650,22 @@ final class RVN_Compare_Settings {
 			if ( 'soft_bg_enabled' === $field ) {
 				// Снятый чекбокс в POST не приходит — явно пишем '0'.
 				$sanitized['design'][ $section ][ $field ] = ( isset( $raw['design']['behavior'][ $field ] ) && $raw['design']['behavior'][ $field ] ) ? '1' : '0';
+			} elseif ( 'inherit_theme_styles' === $field ) {
+				$sanitized['design'][ $section ][ $field ] = ( isset( $raw['design']['behavior'][ $field ] ) && $raw['design']['behavior'][ $field ] ) ? '1' : '0';
+			} elseif ( 'buy_shortcodes' === $field ) {
+				// Textarea «свои шорткоды»: одна строка = один шорткод.
+				$lines = array();
+				$raw_v = isset( $raw['design']['behavior'][ $field ] ) ? $raw['design']['behavior'][ $field ] : '';
+				if ( is_array( $raw_v ) ) {
+					$raw_v = implode( "\n", $raw_v );
+				}
+				foreach ( preg_split( '/[\r\n]+/', (string) $raw_v ) as $line ) {
+					$line = trim( (string) $line );
+					if ( '' !== $line ) {
+						$lines[] = wp_kses_post( wp_unslash( $line ) );
+					}
+				}
+				$sanitized['design'][ $section ][ $field ] = array_slice( $lines, 0, 50 );
 			} else {
 				$v = ( null !== $value ) ? sanitize_key( (string) $value ) : '';
 				$sanitized['design'][ $section ][ $field ] = in_array( $v, array( 'buy', 'shortcode', 'hidden' ), true ) ? $v : $cur;

@@ -342,3 +342,48 @@
 .rvn-compare-copy-btn {
 	white-space: nowrap;
 }
+
+/* ===== Вкладка «Дизайн таблицы»: кнопка «Купить» в превью ===== */
+
+.rvn-compare-design__preview .rvn-compare-buy {
+	display: inline-block;
+	margin-top: 6px;
+	padding: 6px 10px;
+	background: var( --rvn-compare-accent );
+	color: #fff;
+	font-size: 12px;
+	font-weight: 500;
+	text-decoration: none;
+	border-radius: var( --rvn-compare-radius-btn );
+	transition: background 0.15s, color 0.15s, filter 0.15s;
+}
+
+.rvn-compare-design__preview .rvn-compare-buy:hover {
+	color: #fff;
+	filter: brightness( 0.95 );
+}
+
+.rvn-compare-design__preview .rvn-compare-buy--theme {
+	background-color: transparent;
+	color: var( --rvn-compare-accent );
+	font-weight: 600;
+	border-radius: 0;
+}
+
+.rvn-compare-design__preview .rvn-compare-buy--theme:hover {
+	color: var( --rvn-compare-accent );
+	filter: none;
+}
+
+/* ===== Вкладка «Поля»: фильтр и вкл/выкл все ===== */
+
+.rvn-compare-fields-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 8px 0 4px;
+}
+
+.rvn-compare-sort--fields .rvn-compare-sort__item.is-hidden {
+	display: none;
+}
